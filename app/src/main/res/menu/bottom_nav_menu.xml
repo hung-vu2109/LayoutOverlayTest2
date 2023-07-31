@@ -1,0 +1,11 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".MainActivity">
+    <item android:id="@+id/nav_fragment_container_music"
+        android:icon="@drawable/baseline_library_music_24"
+        android:title="@string/nav_fragment_container_music"/>
+    <item android:id="@+id/nav_fragment_container_video"
+        android:icon="@drawable/baseline_ondemand_video_24"
+        android:title="@string/nav_fragment_container_video"/>
+</menu>

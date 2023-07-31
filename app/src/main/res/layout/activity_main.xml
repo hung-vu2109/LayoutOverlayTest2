@@ -1,0 +1,206 @@
+
+    <androidx.constraintlayout.motion.widget.MotionLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:id="@+id/motionLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/img_background"
+        app:motionDebug="NO_DEBUG"
+        app:layoutDescription="@xml/scene_24"
+        tools:context=".MainActivity">
+
+        <FrameLayout
+            android:id="@+id/fragmentToReplace_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/lightPink"/>
+
+
+        <View
+            android:id="@+id/top_image_container"
+            android:layout_width="match_parent"
+            android:layout_height="320dp"
+            app:layout_constrainedWidth="true"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ImageView
+            android:id="@+id/top_image"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:scaleType="fitCenter"
+            app:layout_constraintBottom_toBottomOf="@id/top_image_container"
+            app:layout_constraintEnd_toEndOf="@id/top_image_container"
+            app:layout_constraintStart_toStartOf="@id/top_image_container"
+            app:layout_constraintTop_toTopOf="@id/top_image_container"
+            app:srcCompat="@drawable/girl_with_cat" />
+
+        <TextView
+            android:id="@+id/minimalTextView_songName"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:padding="7dp"
+            android:orientation="horizontal"
+            android:text="Song Name"
+            android:textColor="@color/white"
+            android:textDirection="ltr"
+            android:textSize="18sp"
+            android:textAlignment="center"
+            android:textStyle="italic"
+            android:singleLine="true"
+            android:ellipsize="marquee"
+            android:marqueeRepeatLimit="marquee_forever"
+            app:layout_constraintBottom_toBottomOf="@id/top_image_container"
+            app:layout_constraintStart_toEndOf="@id/top_image"
+            app:layout_constraintTop_toTopOf="@id/top_image_container" />
+        <ImageView
+            android:id="@+id/image_play"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:alpha="1"
+            app:layout_constraintBottom_toBottomOf="@id/top_image_container"
+            app:layout_constraintEnd_toStartOf="@id/image_clear"
+            app:layout_constraintTop_toTopOf="@id/top_image_container"
+            app:srcCompat="@drawable/baseline_play_arrow_24" />
+
+        <ImageView
+            android:id="@+id/image_clear"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:alpha="0"
+            app:layout_constraintBottom_toBottomOf="@id/top_image_container"
+            app:layout_constraintEnd_toEndOf="@id/top_image_container"
+            app:layout_constraintTop_toTopOf="@id/top_image_container"
+            app:srcCompat="@drawable/baseline_clear_24" />
+
+        <FrameLayout
+            android:id="@+id/recyclerview_container"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@color/white"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/top_image_container"/>
+
+        <RelativeLayout
+            android:id="@+id/recyclerview_front"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/img_background">
+            <TextView
+                android:id="@+id/tv_player_songName"
+                android:text="Song Name"
+                android:textSize="22sp"
+                android:textColor="@color/white"
+                android:textAlignment="center"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="9dp"
+                android:layout_alignParentTop="true"
+                android:layout_marginTop="13dp"/>
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="3dp"
+                android:orientation="vertical"
+                android:layout_above="@id/containerBtn_player">
+
+                <SeekBar
+                    android:id="@+id/seekBar_player"
+                    android:layout_width="match_parent"
+                    android:layout_height="10dp"
+                    android:padding="12dp"
+                    android:layout_marginRight="25dp"
+                    android:layout_marginLeft="25dp"/>
+
+                <RelativeLayout
+                    android:id="@+id/containerTv_player__songTime"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="15dp">
+                    <TextView
+                        android:id="@+id/tv_player_currentTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="21dp"
+                        android:layout_alignParentLeft="true"
+                        android:text="currentTime"
+                        android:textSize="15sp"
+                        android:textColor="@color/white"/>
+
+                    <TextView
+                        android:id="@+id/tv_player_endTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginRight="21dp"
+                        android:layout_alignParentRight="true"
+                        android:text="End Time"
+                        android:textSize="15sp"
+                        android:textColor="@color/white"/>
+                </RelativeLayout>
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/containerBtn_player"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true">
+                <ImageButton
+                    android:id="@+id/btn_player_prevSong"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_centerInParent="true"
+                    android:layout_toLeftOf="@id/btn_player_pauseSong"
+                    android:background="@drawable/baseline_skip_previous_24"/>
+
+                <ImageButton
+                    android:id="@+id/btn_player_pauseSong"
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
+                    android:layout_centerInParent="true"
+                    android:background="@drawable/baseline_pause_circle_outline_24" />
+
+                <ImageButton
+                    android:id="@+id/btn_player_nextSong"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:layout_centerInParent="true"
+                    android:layout_toRightOf="@id/btn_player_pauseSong"
+                    android:background="@drawable/baseline_skip_next_24" />
+
+                <ImageButton
+                    android:id="@+id/btn_player_loop"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:layout_centerInParent="true"
+                    android:layout_toLeftOf="@id/btn_player_prevSong"
+                    android:background="@drawable/baseline_repeat_24"/>
+
+                <ImageButton
+                    android:id="@+id/btn_player_shuffle"
+                    android:layout_width="50dp"
+                    android:layout_height="50dp"
+                    android:layout_centerInParent="true"
+                    android:layout_toRightOf="@id/btn_player_nextSong"
+                    android:background="@drawable/baseline_shuffle_24"/>
+            </RelativeLayout>
+
+
+        </RelativeLayout>
+
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottom_nav"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:background="@color/white"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toBottomOf="parent"
+            app:menu="@menu/bottom_nav_menu" />
+
+    </androidx.constraintlayout.motion.widget.MotionLayout>

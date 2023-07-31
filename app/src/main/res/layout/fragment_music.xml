@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:padding="9dp"
+    android:id="@+id/fragment_container_music"
+    android:orientation="vertical"
+    android:background="@color/black">
+
+    <TextView
+        android:id="@+id/fragment_music_tv"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:padding="9dp"
+        android:text="Choose your song"
+        android:textAlignment="center"
+        android:textSize="21sp"
+        android:textColor="@color/white"/>
+
+    <TextView
+        android:id="@+id/fragment_music_tv_noSong"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="NO SONGS FOUND"
+        android:textColor="@color/white"
+        android:textSize="21sp"
+        android:textStyle="bold"
+        android:layout_centerInParent="true"
+        android:visibility="gone"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/fragment_music_recyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="9dp"
+        android:layout_below="@id/fragment_music_tv">
+
+    </androidx.recyclerview.widget.RecyclerView>
+
+</RelativeLayout>
