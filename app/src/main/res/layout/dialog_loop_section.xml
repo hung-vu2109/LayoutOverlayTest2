@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="9dp">
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp">
+        <TextView
+            android:id="@+id/tv_headerTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="9dp"
+            android:text="Loop Section"
+            android:textSize="21sp"
+            android:textStyle="bold"
+            android:textAlignment="center"
+            android:layout_alignParentLeft="true"/>
+        <ImageButton
+            android:id="@+id/btn_Close_LoopSectionDialog"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:layout_alignParentRight="true"
+            android:background="@drawable/outline_circle_24"
+            android:src="@drawable/round_close_24"/>
+
+    </RelativeLayout>
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="9dp"
+        android:text="Set Start Point and End Point to repeat section of this song"
+        android:textSize="16sp"
+        android:textStyle="italic"
+        android:textAlignment="center"/>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_alignParentLeft="true"
+            android:layout_marginLeft="12dp">
+            <TextView
+                android:id="@+id/tv_startPoint_LoopSection"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="Start Point"
+                android:textSize="16sp"
+                android:textColor="@color/green"/>
+            <LinearLayout
+                android:layout_width="85dp"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="5dp"
+                android:layout_below="@+id/tv_startPoint_LoopSection">
+
+                <EditText
+                    android:id="@+id/edt_Minute_StartPoint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="00"
+                    android:inputType="numberDecimal"
+                    android:maxLength="2"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text=":"
+                    android:textStyle="bold"/>
+                <EditText
+                    android:id="@+id/edt_Second_StartPoint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="00"
+                    android:inputType="numberDecimal"
+                    android:maxLength="2"/>
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_alignParentEnd="true"
+            android:layout_marginEnd="12dp">
+            <TextView
+                android:id="@+id/tv_endPoint_LoopSection"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="End Point"
+                android:textSize="16sp"
+                android:textColor="@color/red"/>
+            <LinearLayout
+                android:layout_width="85dp"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="5dp"
+                android:layout_below="@+id/tv_endPoint_LoopSection">
+
+                <EditText
+                    android:id="@+id/edt_Minute_EndPoint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="00"
+                    android:inputType="numberDecimal"
+                    android:maxLength="2"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text=":"
+                    android:textStyle="bold"/>
+                <EditText
+                    android:id="@+id/edt_Second_EndPoint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="00"
+                    android:inputType="numberDecimal"
+                    android:maxLength="2"/>
+            </LinearLayout>
+        </LinearLayout>
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/tv_rememberLoopSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Remember: CHOOSE THE SONG FIRST"
+            android:textStyle="italic"
+            android:textSize="15sp"
+            android:textAlignment="center"/>
+        <TextView
+            android:id="@+id/tv_disableLoopSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tv_rememberLoopSection"
+            android:text="Disable: set StartPoint = EndPoint or click 1 time on Repeat Button"
+            android:textStyle="italic"
+            android:textSize="15sp"
+            android:textAlignment="center"/>
+
+        <Button
+            android:id="@+id/btn_Ok_LoopSectionDialog"
+            android:layout_width="80dp"
+            android:layout_height="40dp"
+            android:layout_below="@id/tv_disableLoopSection"
+            android:layout_centerInParent="true"
+            android:text="OK" />
+
+    </RelativeLayout>
+
+</LinearLayout>

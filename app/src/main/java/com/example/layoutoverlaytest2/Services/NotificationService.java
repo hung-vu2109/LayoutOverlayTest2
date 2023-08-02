@@ -5,6 +5,7 @@ import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_NEXT;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PLAY;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PREV;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_REPEAT;
+import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_REPEAT_SECTION;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_SHUFFLE;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_SONG_LIST;
@@ -33,11 +34,15 @@ import com.example.layoutoverlaytest2.Models.SongModel;
 import com.example.layoutoverlaytest2.Models.TextViewMainObject;
 import com.example.layoutoverlaytest2.MyInitialMediaSongPlayer;
 import com.example.layoutoverlaytest2.R;
+import com.example.layoutoverlaytest2.RepeatSectionDialog;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class NotificationService extends Service implements  MediaPlayer.OnErrorListener{
@@ -55,6 +60,9 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
     boolean isShuffleSongs = false;
     int pressedTimes = 0;
     boolean loopAllSongs = false, loopOneSong = false;
+    boolean isRepeatSection = false;
+    long longStartPoint = -1;
+    int intEndPoint = -1, intStartPoint = -1;
 
 
     public NotificationService(){}
@@ -114,10 +122,12 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                             Log.d(TAG, "Play from song list");
                             setInitialDataSource();
                             break;
+
                         case REMOVE_SONG:
                             Log.d(TAG, "Remove song from list");
                             removeSongInPlaylist();
                             break;
+
                         case ACTION_PLAY:
 
 
@@ -161,6 +171,11 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                             Log.d(TAG, "pressedTimes Value: "+ pressedTimes);
                             break;
 
+                        case ACTION_REPEAT_SECTION:
+
+                            Log.d(TAG, "Repeat Section clicked");
+                            repeatSectionMethod(intent);
+                            break;
                     }
                 } else {
                     Log.e(TAG+"actionCommand", "NULL");
@@ -300,6 +315,7 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                 } else {
                     buttonMainObject.getPlayBtn().setBackgroundResource(R.drawable.baseline_play_circle_outline_24);
                 }
+                /*********************************************************************************************/
 
 //                Shuffle Button UI
                 if (isShuffleSongs) {
@@ -307,7 +323,7 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                 } else {
                     buttonMainObject.getShuffleBtn().setBackgroundResource(R.drawable.baseline_shuffle_24);
                 }
-
+                /*********************************************************************************************/
 //                Loop Button UI
                 switch (pressedTimes) {
                     case 0:
@@ -321,7 +337,7 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                         // loop 1 songs
                         loopAllSongs = false;
                         loopOneSong = true;
-                        Log.d("LoopAllSongs", "loopCurrentSongs "+"loopAllSong: "+ "false");
+                        Log.d("LoopAllSongs", "loopCurrentSongs ");
                         buttonMainObject.getLoopBtn().setBackgroundResource(R.drawable.baseline_repeat_one_on_24);
                         break;
                     case 2:
@@ -333,6 +349,7 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                         buttonMainObject.getLoopBtn().setBackgroundResource(R.drawable.baseline_repeat_on_24);
                         break;
                 }
+                /*********************************************************************************************/
 
 //                Title Song Name
                 String songName = null;
@@ -344,28 +361,26 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                 }
 
                 textViewMainObject.getSongNameTv().setText(songName);
-
+                /*********************************************************************************************/
 
 //                Title Start Time
                 if (mediaPlayer != null){
                     textViewMainObject.getCurrentTimeTv().setText(formatLongToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())));
                 }
+                /*********************************************************************************************/
 
 //                Title End Time
                 if (mediaPlayer != null && currentSong != null){
                     textViewMainObject.getEndTimeTv().setText(formatLongToMMSS(String.valueOf(currentSong.getDuration())));
                 }
+                /*********************************************************************************************/
 
-
-//                SeekBar
+//                SeekBar Code Start
                 if (mediaPlayer != null){
-                    mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                        @Override
-                        public void onPrepared(MediaPlayer mediaPlayer) {
+                    mediaPlayer.setOnPreparedListener(mediaPlayer -> {
 
-                    seekBar.setProgress(0);
-                    seekBar.setMax(mediaPlayer.getDuration());
-                        }
+                seekBar.setProgress(0);
+                seekBar.setMax(mediaPlayer.getDuration());
                     });
 
                     seekBar.setProgress(mediaPlayer.getCurrentPosition());
@@ -395,7 +410,30 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
 
                         }
                     });
+
                 }
+                /*********************************************************************************************/
+
+//                repeatSection
+                if (isRepeatSection && pressedTimes == 1){
+                    if (mediaPlayer != null &&
+                            formatLongToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())).equals(formatLongToMMSS(String.valueOf(intEndPoint)))){
+
+                        Log.d(TAG+"repeat Section State pressTime", pressedTimes+"");
+                        Log.d(TAG+"repeat Section State current Duration", mediaPlayer.getCurrentPosition()+"");
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+                            Log.d(TAG+"repeat Section State is", isRepeatSection+" inside");
+                            mediaPlayer.seekTo(longStartPoint, MediaPlayer.SEEK_CLOSEST_SYNC);
+                        } else {
+                            mediaPlayer.seekTo(intStartPoint);
+                        }
+                    }
+                } else {
+                    isRepeatSection = false;
+                }
+                Log.d(TAG+"repeat Section State is", isRepeatSection+"");
+
                 new Handler().postDelayed(this, 1000);
             }
         });
@@ -478,6 +516,60 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
         Log.d("Random Position ","Random Position: " +randPosition);
 
         MyInitialMediaSongPlayer.setStarterIndex(randPosition);
+
+    }
+
+    private void repeatSectionMethod(Intent intent){
+
+        HashMap<Long, Long> hashMap;
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                hashMap = intent.getSerializableExtra("PAIR_VALUE",null);
+            } else {
+                hashMap = (HashMap<Long, Long>) intent.getSerializableExtra("PAIR_VALUE");
+            }
+            Log.d(TAG+"repeat Section", String.valueOf(hashMap));
+            Log.d(TAG+"repeat Section KEY", String.valueOf(hashMap.keySet()));
+            Log.d(TAG+"repeat Section VALUE", String.valueOf(hashMap.values()));
+
+            long startValue = -1, endValue = -1;
+
+            for(long i: hashMap.keySet()){
+                Log.d("start value", i+"");
+                startValue = i;
+                endValue = hashMap.get(i);
+                Log.d("end value", hashMap.get(i)+"");
+            }
+            if (mediaPlayer != null && !hashMap.isEmpty() && startValue >= 0 && endValue >= 0 && hashMap.size() == 1 && startValue != endValue){
+                long longStart = Long.parseLong(String.valueOf(startValue));
+                int intStart = Integer.parseInt(String.valueOf(startValue));
+                Log.d(TAG+"repeat Section", "longStart: "+ longStart+ " && "+" intStart: "+ intStart);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    mediaPlayer.seekTo(longStart, MediaPlayer.SEEK_CLOSEST_SYNC);
+                    Log.d(TAG+"repeat Section", "API 26+");
+
+                } else {
+                    Log.d(TAG+"repeat Section", "API 24,25");
+                    mediaPlayer.seekTo(intStart);
+                }
+//                State is RepeatSection
+                isRepeatSection = true;
+                pressedTimes = 1;
+
+                int intEnd = Integer.parseInt(String.valueOf(endValue));
+                Log.d(TAG+"repeat Section", "intEnd: "+ intEnd);
+
+                longStartPoint = longStart;
+                intStartPoint = intStart;
+                intEndPoint = intEnd;
+
+            } else {
+                isRepeatSection = false;
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+
 
     }
 

@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<menu xmlns:android="http://schemas.android.com/apk/res/android">
+<menu xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <group android:checkableBehavior="all">
-        <item android:id="@+id/repeatSection_Option"
+    <group android:checkableBehavior="none">
+        <item
+            android:id="@+id/repeatSection_Option"
+            android:icon="@drawable/baseline_repeat_24"
             android:title="Repeat Section"
-            android:icon="@drawable/baseline_repeat_24"/>
-        <item android:id="@+id/pipMode_Option"
+            app:showAsAction="withText"/>
+        <item
+            android:id="@+id/pipMode_Option"
+            android:icon="@drawable/baseline_picture_in_picture_24"
             android:title="Picture in Picture"
-            android:icon="@drawable/baseline_picture_in_picture_24"/>
+            app:showAsAction="collapseActionView" />
     </group>
 </menu>

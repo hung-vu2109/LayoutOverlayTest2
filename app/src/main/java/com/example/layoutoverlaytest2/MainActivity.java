@@ -8,7 +8,10 @@ import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_SHUFFLE;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Dialog;
 import android.content.ComponentName;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
@@ -21,6 +24,9 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
@@ -53,10 +59,13 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     static final String[] RUNTIME_PERMISSION = { Manifest.permission.READ_EXTERNAL_STORAGE };
     ArrayList<SongModel> songModelArrayList;
     TextView title_songName,currentTime,endTime;
+    TextView mini_songName;
     ImageView thumbnail_imageView;
+    ImageView mini_playBtn, mini_closeBtn;
     ImageButton pauseBtn, nextBtn, prevBtn, loopBtn, shuffleBtn;
     SeekBar seekBar;
     NotificationService notificationService;
+    public static boolean isChecked = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,6 +96,11 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         seekBar = findViewById(R.id.seekBar_player);
 
 
+        mini_songName = findViewById(R.id.minimalTextView_songName);
+        mini_playBtn = findViewById(R.id.image_play);
+        mini_closeBtn = findViewById(R.id.image_clear);
+
+
         if(!checkOverlayPer()){
              requestOverlayPer();
         }
@@ -98,6 +112,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        Log.d(TAG, "onCreateOptionMenu");
         getMenuInflater().inflate(R.menu.top_options_menu, menu);
         return super.onCreateOptionsMenu(menu);
     }
@@ -108,6 +123,8 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         if (itemId == R.id.repeatSection_Option){
             Log.d(TAG, "repeatSection Option");
+//            isChecked = !isChecked;
+//            item.setChecked(isChecked);
             showRepeatSectionDialog();
         }
 
@@ -150,17 +167,9 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     private boolean checkReadStoragePer() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (Environment.isExternalStorageManager()){
-                return true;
-            } else {
-                return false;
-            }
+            return Environment.isExternalStorageManager();
         } else {
-            if (ContextCompat.checkSelfPermission(MainActivity.this, RUNTIME_PERMISSION[0]) == PackageManager.PERMISSION_GRANTED) {
-                return true;
-            } else {
-                return false;
-            }
+            return ContextCompat.checkSelfPermission(MainActivity.this, RUNTIME_PERMISSION[0]) == PackageManager.PERMISSION_GRANTED;
         }
     }
 
@@ -168,6 +177,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     private void requestReadStoragePer() {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Log.d(TAG, "ActivityCompat.requestPermissions");
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.MANAGE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_CODE);
 //           or
 //            Intent intent = new Intent();
@@ -196,6 +206,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     }
 
+    @SuppressLint("NonConstantResourceId")
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         switch (item.getItemId()){
@@ -259,6 +270,17 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             Log.d(TAG, "loop btn clicked");
             shuffleBtnClicked();
         });
+
+//        if (showRepeatSectionDialog()) {
+//            loopSectionBtn.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View view) {
+//
+
+//                }
+//            });
+//        }
+
         notificationService.updateUiFromService(this,
                 new ButtonMainObject(loopBtn, prevBtn, pauseBtn, nextBtn, shuffleBtn),
                 new TextViewMainObject(title_songName, currentTime, endTime),
@@ -322,5 +344,10 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         startService(intent);
     }
 
-    private void showRepeatSectionDialog(){}
+    private void showRepeatSectionDialog(){
+
+        RepeatSectionDialog dialog = new RepeatSectionDialog(this);
+        dialog.setCanceledOnTouchOutside(true);
+        dialog.show();
+    }
 }
