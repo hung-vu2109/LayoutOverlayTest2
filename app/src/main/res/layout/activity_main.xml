@@ -55,7 +55,7 @@
             app:layout_constraintBottom_toBottomOf="@id/top_image_container"
             app:layout_constraintStart_toEndOf="@id/top_image"
             app:layout_constraintTop_toTopOf="@id/top_image_container" />
-        <ImageView
+        <ImageButton
             android:id="@+id/image_play"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -64,7 +64,7 @@
             app:layout_constraintBottom_toBottomOf="@id/top_image_container"
             app:layout_constraintEnd_toStartOf="@id/image_clear"
             app:layout_constraintTop_toTopOf="@id/top_image_container"
-            app:srcCompat="@drawable/baseline_play_arrow_24" />
+            android:background="@drawable/baseline_play_arrow_24"/>
 
         <ImageView
             android:id="@+id/image_clear"

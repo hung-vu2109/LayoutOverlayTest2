@@ -44,6 +44,7 @@ import androidx.core.content.ContextCompat;
 import com.example.layoutoverlaytest2.Fragments.MusicFragment;
 import com.example.layoutoverlaytest2.Fragments.VideoFragment;
 import com.example.layoutoverlaytest2.Models.ButtonMainObject;
+import com.example.layoutoverlaytest2.Models.MiniObject;
 import com.example.layoutoverlaytest2.Models.SongModel;
 import com.example.layoutoverlaytest2.Models.TextViewMainObject;
 import com.example.layoutoverlaytest2.Services.NotificationService;
@@ -100,6 +101,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         mini_playBtn = findViewById(R.id.image_play);
         mini_closeBtn = findViewById(R.id.image_clear);
 
+//        mini_songName.setSelected(true);
 
         if(!checkOverlayPer()){
              requestOverlayPer();
@@ -271,21 +273,17 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             shuffleBtnClicked();
         });
 
-//        if (showRepeatSectionDialog()) {
-//            loopSectionBtn.setOnClickListener(new View.OnClickListener() {
-//                @Override
-//                public void onClick(View view) {
-//
-
-//                }
-//            });
-//        }
-
         notificationService.updateUiFromService(this,
                 new ButtonMainObject(loopBtn, prevBtn, pauseBtn, nextBtn, shuffleBtn),
                 new TextViewMainObject(title_songName, currentTime, endTime),
-                seekBar);
+                seekBar,
+                new MiniObject(mini_songName, mini_playBtn));
 
+
+        mini_closeBtn.setOnClickListener(view -> {
+
+            finish();
+        });
     }
 
 
@@ -311,6 +309,11 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 //        }
 //    }
 
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+    }
 
     private void playBtnClicked(){
         Intent intent = new Intent(this, NotificationService.class);

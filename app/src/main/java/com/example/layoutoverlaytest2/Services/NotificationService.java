@@ -25,11 +25,14 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.View;
 import android.widget.SeekBar;
 
 import androidx.annotation.Nullable;
 
+import com.example.layoutoverlaytest2.MainActivity;
 import com.example.layoutoverlaytest2.Models.ButtonMainObject;
+import com.example.layoutoverlaytest2.Models.MiniObject;
 import com.example.layoutoverlaytest2.Models.SongModel;
 import com.example.layoutoverlaytest2.Models.TextViewMainObject;
 import com.example.layoutoverlaytest2.MyInitialMediaSongPlayer;
@@ -52,10 +55,11 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
     static final String DATA_KEY = "SONG_BUNDLE";
     private static final int REQUEST_CODE = 592431;
     static final String[] RUNTIME_PERMISSION = { Manifest.permission.READ_EXTERNAL_STORAGE };
-    MediaPlayer mediaPlayer = MyInitialMediaSongPlayer.getInstance();
+    public MediaPlayer mediaPlayer = MyInitialMediaSongPlayer.getInstance();
     ArrayList<SongModel> songModelArrayList = new ArrayList<>();
     ArrayList<SongModel> currentArrayList = new ArrayList<>();
     private IBinder mBinder = new MyBinder();
+    public Handler handler = new Handler();
     SongModel currentSong;
     boolean isShuffleSongs = false;
     int pressedTimes = 0;
@@ -217,6 +221,14 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
 //    }
 
     @Override
+    public void onDestroy() {
+
+        mediaPlayer.release();
+        mediaPlayer = null;
+        super.onDestroy();
+    }
+
+    @Override
     public boolean onError(MediaPlayer mediaPlayer, int i, int i1) {
         Log.d(TAG+" MediaPlayer", "onError");
         mediaPlayer.reset();
@@ -304,10 +316,12 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
         }
         Log.d(TAG, "Total songs after "+ songModelArrayList.size());
     }
-    public void updateUiFromService(Activity activity, ButtonMainObject buttonMainObject, TextViewMainObject textViewMainObject, SeekBar seekBar){
+    public void updateUiFromService(Activity activity, ButtonMainObject buttonMainObject, TextViewMainObject textViewMainObject, SeekBar seekBar, MiniObject miniObject) {
+
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                Log.i(TAG+" Current Thread ",Thread.currentThread().getName());
 
 //                Play Button UI
                 if (mediaPlayer.isPlaying()) {
@@ -345,7 +359,7 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                         loopAllSongs = true;
                         loopOneSong = false;
                         loopAllSong();
-                        Log.d("LoopAllSongs", "loopAllSongs: "+ loopAllSongs);
+                        Log.d("LoopAllSongs", "loopAllSongs: " + loopAllSongs);
                         buttonMainObject.getLoopBtn().setBackgroundResource(R.drawable.baseline_repeat_on_24);
                         break;
                 }
@@ -353,10 +367,10 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
 
 //                Title Song Name
                 String songName = null;
-                if (currentSong != null){
-                     songName = currentSong.getTitle();
+                if (currentSong != null) {
+                    songName = currentSong.getTitle();
                 }
-                if (songName == null){
+                if (songName == null) {
                     songName = "Song Name";
                 }
 
@@ -364,28 +378,25 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                 /*********************************************************************************************/
 
 //                Title Start Time
-                if (mediaPlayer != null){
+                if (mediaPlayer != null) {
                     textViewMainObject.getCurrentTimeTv().setText(formatLongToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())));
                 }
                 /*********************************************************************************************/
 
 //                Title End Time
-                if (mediaPlayer != null && currentSong != null){
+                if (mediaPlayer != null && currentSong != null) {
                     textViewMainObject.getEndTimeTv().setText(formatLongToMMSS(String.valueOf(currentSong.getDuration())));
                 }
                 /*********************************************************************************************/
 
 //                SeekBar Code Start
-                if (mediaPlayer != null){
-                    mediaPlayer.setOnPreparedListener(mediaPlayer -> {
+                if (mediaPlayer != null) {
 
-                seekBar.setProgress(0);
-                seekBar.setMax(mediaPlayer.getDuration());
-                    });
+                    seekBar.setMax(mediaPlayer.getDuration());
 
                     seekBar.setProgress(mediaPlayer.getCurrentPosition());
 
-                    if (mediaPlayer.isPlaying()){
+                    if (mediaPlayer.isPlaying()) {
                         buttonMainObject.getPlayBtn().setBackgroundResource(R.drawable.baseline_pause_circle_outline_24);
                     } else {
                         buttonMainObject.getPlayBtn().setBackgroundResource(R.drawable.baseline_play_circle_outline_24);
@@ -414,16 +425,43 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                 }
                 /*********************************************************************************************/
 
-//                repeatSection
-                if (isRepeatSection && pressedTimes == 1){
-                    if (mediaPlayer != null &&
-                            formatLongToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())).equals(formatLongToMMSS(String.valueOf(intEndPoint)))){
+//                mini UI
+                miniObject.getMini_songName().setText(songName);
 
-                        Log.d(TAG+"repeat Section State pressTime", pressedTimes+"");
-                        Log.d(TAG+"repeat Section State current Duration", mediaPlayer.getCurrentPosition()+"");
+                miniObject.getMini_playBtn().setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        if (currentSong != null) {
+                            if (mediaPlayer.isPlaying()) {
+                                mediaPlayer.pause();
+                                Log.d(TAG + "Mini Player", "Pausing");
+                            } else {
+                                mediaPlayer.start();
+                                Log.d(TAG + "Mini Player", "Playing");
+                            }
+                        } else {
+                            setInitialDataSource();
+                        }
+                    }
+                });
+
+                if (mediaPlayer.isPlaying()) {
+                    miniObject.getMini_playBtn().setBackgroundResource(R.drawable.baseline_pause_24);
+                } else {
+                    miniObject.getMini_playBtn().setBackgroundResource(R.drawable.baseline_play_arrow_24);
+                }
+                /*********************************************************************************************/
+
+//                repeatSection
+                if (isRepeatSection && pressedTimes == 1) {
+                    if (mediaPlayer != null &&
+                            formatLongToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())).equals(formatLongToMMSS(String.valueOf(intEndPoint)))) {
+
+                        Log.d(TAG + "repeat Section State pressTime", pressedTimes + "");
+                        Log.d(TAG + "repeat Section State current Duration", mediaPlayer.getCurrentPosition() + "");
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
-                            Log.d(TAG+"repeat Section State is", isRepeatSection+" inside");
+                            Log.d(TAG + "repeat Section State is", isRepeatSection + " inside");
                             mediaPlayer.seekTo(longStartPoint, MediaPlayer.SEEK_CLOSEST_SYNC);
                         } else {
                             mediaPlayer.seekTo(intStartPoint);
@@ -432,9 +470,15 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                 } else {
                     isRepeatSection = false;
                 }
-                Log.d(TAG+"repeat Section State is", isRepeatSection+"");
+                Log.d(TAG + "repeat Section State is", isRepeatSection + "");
 
-                new Handler().postDelayed(this, 1000);
+                try {
+
+                    handler.postDelayed(this, 1000);
+                } catch (Exception e){
+                    e.printStackTrace();
+                }
+
             }
         });
 
