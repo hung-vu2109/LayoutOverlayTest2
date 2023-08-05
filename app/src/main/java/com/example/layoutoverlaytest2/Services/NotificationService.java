@@ -7,6 +7,7 @@ import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PREV;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_REPEAT;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_REPEAT_SECTION;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_SHUFFLE;
+import static com.example.layoutoverlaytest2.ApplicationClass.CHANNEL_ID_1;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_SONG_LIST;
 import static com.example.layoutoverlaytest2.ApplicationClass.REMOVE_SONG;
@@ -14,9 +15,14 @@ import static com.example.layoutoverlaytest2.ApplicationClass.REMOVE_SONG;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Binder;
@@ -24,11 +30,16 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.MediaStore;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.SeekBar;
 
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.core.app.TaskStackBuilder;
 
 import com.example.layoutoverlaytest2.MainActivity;
 import com.example.layoutoverlaytest2.Models.ButtonMainObject;
@@ -37,24 +48,21 @@ import com.example.layoutoverlaytest2.Models.SongModel;
 import com.example.layoutoverlaytest2.Models.TextViewMainObject;
 import com.example.layoutoverlaytest2.MyInitialMediaSongPlayer;
 import com.example.layoutoverlaytest2.R;
-import com.example.layoutoverlaytest2.RepeatSectionDialog;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-public class NotificationService extends Service implements  MediaPlayer.OnErrorListener{
+public class NotificationService extends Service implements MediaPlayer.OnErrorListener {
 
     static final String TAG = "NotificationService ";
     static final String BUNDLE_NAME = "MY_BUNDLE";
     static final String DATA_KEY = "SONG_BUNDLE";
     private static final int REQUEST_CODE = 592431;
-    static final String[] RUNTIME_PERMISSION = { Manifest.permission.READ_EXTERNAL_STORAGE };
+    static final String[] RUNTIME_PERMISSION = {Manifest.permission.READ_EXTERNAL_STORAGE};
     public MediaPlayer mediaPlayer = MyInitialMediaSongPlayer.getInstance();
     ArrayList<SongModel> songModelArrayList = new ArrayList<>();
     ArrayList<SongModel> currentArrayList = new ArrayList<>();
@@ -67,30 +75,32 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
     boolean isRepeatSection = false;
     long longStartPoint = -1;
     int intEndPoint = -1, intStartPoint = -1;
+    boolean isShowNotification = true;
+
+    Runnable runnable;
+
+    public NotificationService() {
+    }
 
 
-    public NotificationService(){}
-
-
-
-        @Override
+    @Override
     public void onCreate() {
         super.onCreate();
 
         Log.d(TAG, " onCreate");
 
 //        check song list from adapter
-            if (songModelArrayList == null || songModelArrayList.size() == 0) {
-                Log.d(TAG, "songModelArrayList: NULL");
-                queryMusicFiles();
-            } else {
+        if (songModelArrayList == null || songModelArrayList.size() == 0) {
+            Log.d(TAG, "songModelArrayList: NULL");
+            queryMusicFiles();
+        } else {
 //            for (SongModel i : songModelArrayList) {
 //                Log.d(TAG, String.valueOf(i));
 //            }
-            }
+        }
 
 
-            initialMusicPlayer();
+        initialMusicPlayer();
     }
 
     @Override
@@ -115,76 +125,72 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
 //        }
 
 
+        String actionCommand = intent.getStringExtra(MY_COMMAND);
+        if (actionCommand != null) {
+
+            switch (actionCommand) {
+                case PLAY_FROM_SONG_LIST:
+                    Log.d(TAG, "Play from song list");
+                    setInitialDataSource();
+                    break;
+
+                case REMOVE_SONG:
+                    Log.d(TAG, "Remove song from list");
+                    removeSongInPlaylist();
+                    break;
+
+                case ACTION_PLAY:
 
 
+                    Log.d(TAG, "Play clicked");
 
-                String actionCommand = intent.getStringExtra(MY_COMMAND);
-                if (actionCommand != null) {
-
-                    switch (actionCommand) {
-                        case PLAY_FROM_SONG_LIST:
-                            Log.d(TAG, "Play from song list");
-                            setInitialDataSource();
-                            break;
-
-                        case REMOVE_SONG:
-                            Log.d(TAG, "Remove song from list");
-                            removeSongInPlaylist();
-                            break;
-
-                        case ACTION_PLAY:
-
-
-                                Log.d(TAG, "Play clicked");
-
-                                playOrPauseSong();
-                                if (currentSong == null) {
-                                    setInitialDataSource();
-                                }
-
-                            break;
-                        case ACTION_NEXT:
-
-                                Log.d(TAG, "Next clicked");
-
-                                playNextSong();
-                                setInitialDataSource();
-
-                            break;
-                        case ACTION_PREV:
-
-                                Log.d(TAG, "Prev clicked");
-
-                                playPrevSong();
-                                setInitialDataSource();
-                            break;
-                        case ACTION_SHUFFLE:
-
-                            Log.d(TAG, "Shuffle clicked");
-                            isShuffleSongs = !isShuffleSongs;
-                            break;
-
-                        case ACTION_REPEAT:
-
-                            Log.d(TAG, "Loop clicked");
-                            pressedTimes+=1;
-                            if (pressedTimes == 3){
-                                pressedTimes = 0;
-                            }
-
-                            Log.d(TAG, "pressedTimes Value: "+ pressedTimes);
-                            break;
-
-                        case ACTION_REPEAT_SECTION:
-
-                            Log.d(TAG, "Repeat Section clicked");
-                            repeatSectionMethod(intent);
-                            break;
+                    playOrPauseSong();
+                    if (currentSong == null) {
+                        setInitialDataSource();
                     }
-                } else {
-                    Log.e(TAG+"actionCommand", "NULL");
-                }
 
+                    break;
+                case ACTION_NEXT:
+
+                    Log.d(TAG, "Next clicked");
+
+                    playNextSong();
+                    setInitialDataSource();
+
+                    break;
+                case ACTION_PREV:
+
+                    Log.d(TAG, "Prev clicked");
+
+                    playPrevSong();
+                    setInitialDataSource();
+                    break;
+                case ACTION_SHUFFLE:
+
+                    Log.d(TAG, "Shuffle clicked");
+                    isShuffleSongs = !isShuffleSongs;
+                    break;
+
+                case ACTION_REPEAT:
+
+                    Log.d(TAG, "Loop clicked");
+                    pressedTimes += 1;
+                    if (pressedTimes == 3) {
+                        pressedTimes = 0;
+                    }
+
+                    Log.d(TAG, "pressedTimes Value: " + pressedTimes);
+                    break;
+
+                case ACTION_REPEAT_SECTION:
+
+                    Log.d(TAG, "Repeat Section clicked");
+                    repeatSectionMethod(intent);
+                    break;
+            }
+        } else {
+            Log.e(TAG + "actionCommand", "NULL");
+        }
 
 
         return START_STICKY;
@@ -194,6 +200,7 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
     @Override
     public boolean onUnbind(Intent intent) {
         Log.d(TAG, "onUnBind");
+        showNotification();
         return super.onUnbind(intent);
     }
 
@@ -220,35 +227,41 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
 //        Log.d(TAG+" MediaPlayer", "onPrepared");
 //    }
 
+
     @Override
     public void onDestroy() {
+        Log.d(TAG, "onDestroy");
+        handler.removeCallbacks(runnable);
+        if (currentSong != null && mediaPlayer != null) {
+            mediaPlayer.stop();
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
 
-        mediaPlayer.release();
-        mediaPlayer = null;
         super.onDestroy();
     }
 
     @Override
     public boolean onError(MediaPlayer mediaPlayer, int i, int i1) {
-        Log.d(TAG+" MediaPlayer", "onError");
+        Log.d(TAG + " MediaPlayer", "onError");
         mediaPlayer.reset();
         return false;
     }
 
 
-    public class MyBinder extends Binder{
-        public NotificationService getService(){
+    public class MyBinder extends Binder {
+        public NotificationService getService() {
             return NotificationService.this;
         }
     }
 
 
-    private void queryMusicFiles(){
+    private void queryMusicFiles() {
 
-        Log.d(TAG+"queryMusicFiles method", " started");
+        Log.d(TAG + "queryMusicFiles method", " started");
 //      Query media files from shared storage
         Uri collectionUri;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             collectionUri = MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
         } else {
             collectionUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
@@ -261,8 +274,8 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
         String selection = MediaStore.Audio.Media.IS_MUSIC + "!=0";
         String sortOrder = MediaStore.Audio.Media.TITLE + " ASC";
 
-        Log.d(TAG+"query files", "starting...");
-        try (Cursor cursor = this.getContentResolver().query(collectionUri, projection, selection, null, sortOrder)){
+        Log.d(TAG + "query files", "starting...");
+        try (Cursor cursor = this.getContentResolver().query(collectionUri, projection, selection, null, sortOrder)) {
 
 //            int thumbnailColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID);
 //            int _thumbnailId = cursor.getInt(thumbnailColumn);
@@ -271,23 +284,24 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
 
             int titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE);
             int durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION);
-            int  pathColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);
+            int pathColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);
 
 
-            while (cursor.moveToNext()){
+            while (cursor.moveToNext()) {
                 String nameSong = cursor.getString(titleColumn);
                 String duration = cursor.getString(durationColumn);
                 String path = cursor.getString(pathColumn);
 
                 SongModel songData = new SongModel(path, nameSong, duration);
-                if (new File(songData.getPath()).exists()){
+                if (new File(songData.getPath()).exists()) {
                     songModelArrayList.add(songData);
                 }
             }
 
         }
-        Log.d(TAG+"query files", "finished !!");
+        Log.d(TAG + "query files", "finished !!");
     }
+
     public void initialMusicPlayer() {
 
         Log.d(TAG, "initialMusicPlayer");
@@ -299,35 +313,38 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
 
     }
 
-    public void setInitialDataSource(){
+    public void setInitialDataSource() {
         Log.d(TAG, "setInitialDatasource");
-        Log.d(TAG+"Song Position", String.valueOf(MyInitialMediaSongPlayer.starterIndex));
+        Log.d(TAG + "Song Position", String.valueOf(MyInitialMediaSongPlayer.starterIndex));
         currentSong = songModelArrayList.get(MyInitialMediaSongPlayer.starterIndex);
 
 
         playMusic();
     }
 
-    public void removeSongInPlaylist(){
-        Log.d(TAG, "Remove the song "+ MyInitialMediaSongPlayer.removeIndex);
-        Log.d(TAG, "Total songs before "+ songModelArrayList.size());
-        if (MyInitialMediaSongPlayer.removeIndex >= 0){
+    public void removeSongInPlaylist() {
+        Log.d(TAG, "Remove the song " + MyInitialMediaSongPlayer.removeIndex);
+        Log.d(TAG, "Total songs before " + songModelArrayList.size());
+        if (MyInitialMediaSongPlayer.removeIndex >= 0) {
             songModelArrayList.remove(MyInitialMediaSongPlayer.removeIndex);
         }
-        Log.d(TAG, "Total songs after "+ songModelArrayList.size());
+        Log.d(TAG, "Total songs after " + songModelArrayList.size());
     }
+
     public void updateUiFromService(Activity activity, ButtonMainObject buttonMainObject, TextViewMainObject textViewMainObject, SeekBar seekBar, MiniObject miniObject) {
 
-        activity.runOnUiThread(new Runnable() {
+        activity.runOnUiThread( runnable = new Runnable() {
             @Override
             public void run() {
-                Log.i(TAG+" Current Thread ",Thread.currentThread().getName());
+                Log.i(TAG + " Current Thread ", Thread.currentThread().getName());
 
 //                Play Button UI
-                if (mediaPlayer.isPlaying()) {
-                    buttonMainObject.getPlayBtn().setBackgroundResource(R.drawable.baseline_pause_circle_outline_24);
-                } else {
-                    buttonMainObject.getPlayBtn().setBackgroundResource(R.drawable.baseline_play_circle_outline_24);
+                if (currentSong!= null) {
+                    if (mediaPlayer.isPlaying()) {
+                        buttonMainObject.getPlayBtn().setBackgroundResource(R.drawable.baseline_pause_circle_outline_24);
+                    } else {
+                        buttonMainObject.getPlayBtn().setBackgroundResource(R.drawable.baseline_play_circle_outline_24);
+                    }
                 }
                 /*********************************************************************************************/
 
@@ -351,6 +368,7 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                         // loop 1 songs
                         loopAllSongs = false;
                         loopOneSong = true;
+                        loopSongOptions();
                         Log.d("LoopAllSongs", "loopCurrentSongs ");
                         buttonMainObject.getLoopBtn().setBackgroundResource(R.drawable.baseline_repeat_one_on_24);
                         break;
@@ -358,7 +376,7 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                         // loop all song
                         loopAllSongs = true;
                         loopOneSong = false;
-                        loopAllSong();
+                        loopSongOptions();
                         Log.d("LoopAllSongs", "loopAllSongs: " + loopAllSongs);
                         buttonMainObject.getLoopBtn().setBackgroundResource(R.drawable.baseline_repeat_on_24);
                         break;
@@ -366,19 +384,19 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                 /*********************************************************************************************/
 
 //                Title Song Name
-                String songName = null;
-                if (currentSong != null) {
-                    songName = currentSong.getTitle();
-                }
-                if (songName == null) {
-                    songName = "Song Name";
-                }
+//                String songName = null;
+//                if (currentSong != null) {
+//                    songName = currentSong.getTitle();
+//                }
+//                if (songName == null) {
+//                    songName = "Song Name";
+//                }
 
-                textViewMainObject.getSongNameTv().setText(songName);
+                textViewMainObject.getSongNameTv().setText(getSongName());
                 /*********************************************************************************************/
 
 //                Title Start Time
-                if (mediaPlayer != null) {
+                if (currentSong != null) {
                     textViewMainObject.getCurrentTimeTv().setText(formatLongToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())));
                 }
                 /*********************************************************************************************/
@@ -390,7 +408,7 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                 /*********************************************************************************************/
 
 //                SeekBar Code Start
-                if (mediaPlayer != null) {
+                if (currentSong != null && mediaPlayer != null) {
 
                     seekBar.setMax(mediaPlayer.getDuration());
 
@@ -406,8 +424,12 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                         @Override
                         public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
                             if (b) {
-                                mediaPlayer.seekTo(i);
-                                mediaPlayer.start();
+                                try {
+                                    mediaPlayer.seekTo(i);
+                                    mediaPlayer.start();
+                                } catch (Exception e){
+                                    e.printStackTrace();
+                                }
                             }
                         }
 
@@ -426,7 +448,7 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                 /*********************************************************************************************/
 
 //                mini UI
-                miniObject.getMini_songName().setText(songName);
+                miniObject.getMini_songName().setText(getSongName());
 
                 miniObject.getMini_playBtn().setOnClickListener(new View.OnClickListener() {
                     @Override
@@ -445,16 +467,18 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                     }
                 });
 
-                if (mediaPlayer.isPlaying()) {
-                    miniObject.getMini_playBtn().setBackgroundResource(R.drawable.baseline_pause_24);
-                } else {
-                    miniObject.getMini_playBtn().setBackgroundResource(R.drawable.baseline_play_arrow_24);
+                if (currentSong != null) {
+                    if (mediaPlayer.isPlaying()) {
+                        miniObject.getMini_playBtn().setBackgroundResource(R.drawable.baseline_pause_24);
+                    } else {
+                        miniObject.getMini_playBtn().setBackgroundResource(R.drawable.baseline_play_arrow_24);
+                    }
                 }
                 /*********************************************************************************************/
 
 //                repeatSection
                 if (isRepeatSection && pressedTimes == 1) {
-                    if (mediaPlayer != null &&
+                    if (currentSong != null &&
                             formatLongToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())).equals(formatLongToMMSS(String.valueOf(intEndPoint)))) {
 
                         Log.d(TAG + "repeat Section State pressTime", pressedTimes + "");
@@ -473,9 +497,8 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                 Log.d(TAG + "repeat Section State is", isRepeatSection + "");
 
                 try {
-
-                    handler.postDelayed(this, 1000);
-                } catch (Exception e){
+                    handler.postDelayed(this, 500);
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
 
@@ -488,30 +511,26 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
     private void playMusic() {
 
         Log.d(TAG, "playMusic method");
-//        mediaPlayer.reset();
         try {
             mediaPlayer.reset();
             mediaPlayer.setDataSource(currentSong.getPath());
             mediaPlayer.prepare();
             mediaPlayer.start();
-
-            mediaPlayer.setLooping(loopOneSong);
-            // set Min Max seekbar
-//            seekBar.setProgress(0);
+            // set Max seekbar
 //            seekBar.setMax(mediaPlayer.getDuration());
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    private void playPrevSong(){
+    private void playPrevSong() {
         Log.d(TAG + "playPrevSong Method", "is clicked");
-        if(isShuffleSongs){
+        if (isShuffleSongs) {
             Log.d(TAG, "starting generate Random song");
             generateRandomSong();
         } else {
             if (MyInitialMediaSongPlayer.starterIndex == 0) {
-               MyInitialMediaSongPlayer.starterIndex = songModelArrayList.size();
+                MyInitialMediaSongPlayer.starterIndex = songModelArrayList.size();
             }
             MyInitialMediaSongPlayer.starterIndex -= 1;
         }
@@ -519,19 +538,21 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
 
 //        currentSong = songModelArrayList.get(MyInitialMediaSongPlayer.starterIndex);
     }
-    private void playOrPauseSong(){
-        if (mediaPlayer.isPlaying()){
+
+    private void playOrPauseSong() {
+        if (mediaPlayer.isPlaying()) {
             mediaPlayer.pause();
-            Log.d(TAG+ "pauseOrPlayMethod", "Pausing");
+            Log.d(TAG + "pauseOrPlayMethod", "Pausing");
 
         } else {
             mediaPlayer.start();
-            Log.d(TAG+ "pauseOrPlayMethod", "Playing");
+            Log.d(TAG + "pauseOrPlayMethod", "Playing");
         }
     }
-    private void playNextSong(){
+
+    private void playNextSong() {
         Log.d(TAG + "playNextSong Method", "is clicked");
-        if (isShuffleSongs){
+        if (isShuffleSongs) {
             Log.d(TAG, "starting generate Random song");
             generateRandomSong();
         } else {
@@ -543,57 +564,64 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
     }
 
 
-    private void loopAllSong(){
+    private void loopSongOptions() {
         mediaPlayer.setOnCompletionListener(mediaPlayer -> {
             if (loopAllSongs) {
-                    Log.d(TAG+"", "Repeat all song with shuffle mode");
-                    playNextSong();
-                    setInitialDataSource();
+                Log.d(TAG + "", "Repeat all song with shuffle mode");
+                playNextSong();
+                setInitialDataSource();
             }
         });
+
+        if (loopOneSong){
+            mediaPlayer.setOnCompletionListener(mediaPlayer1 -> {
+                setInitialDataSource();
+            });
+        }
     }
-    private void generateRandomSong(){
+
+    private void generateRandomSong() {
 
         // random position
         Random random = new Random();
         int randPosition = random.nextInt(songModelArrayList.size());
-        Log.d("Random Position ","Random Position: " +randPosition);
+        Log.d("Random Position ", "Random Position: " + randPosition);
 
         MyInitialMediaSongPlayer.setStarterIndex(randPosition);
 
     }
 
-    private void repeatSectionMethod(Intent intent){
+    private void repeatSectionMethod(Intent intent) {
 
         HashMap<Long, Long> hashMap;
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                hashMap = intent.getSerializableExtra("PAIR_VALUE",null);
+                hashMap = intent.getSerializableExtra("PAIR_VALUE", null);
             } else {
                 hashMap = (HashMap<Long, Long>) intent.getSerializableExtra("PAIR_VALUE");
             }
-            Log.d(TAG+"repeat Section", String.valueOf(hashMap));
-            Log.d(TAG+"repeat Section KEY", String.valueOf(hashMap.keySet()));
-            Log.d(TAG+"repeat Section VALUE", String.valueOf(hashMap.values()));
+            Log.d(TAG + "repeat Section", String.valueOf(hashMap));
+            Log.d(TAG + "repeat Section KEY", String.valueOf(hashMap.keySet()));
+            Log.d(TAG + "repeat Section VALUE", String.valueOf(hashMap.values()));
 
             long startValue = -1, endValue = -1;
 
-            for(long i: hashMap.keySet()){
-                Log.d("start value", i+"");
+            for (long i : hashMap.keySet()) {
+                Log.d("start value", i + "");
                 startValue = i;
                 endValue = hashMap.get(i);
-                Log.d("end value", hashMap.get(i)+"");
+                Log.d("end value", hashMap.get(i) + "");
             }
-            if (mediaPlayer != null && !hashMap.isEmpty() && startValue >= 0 && endValue >= 0 && hashMap.size() == 1 && startValue != endValue){
+            if (mediaPlayer != null && !hashMap.isEmpty() && startValue >= 0 && endValue >= 0 && hashMap.size() == 1 && startValue != endValue) {
                 long longStart = Long.parseLong(String.valueOf(startValue));
                 int intStart = Integer.parseInt(String.valueOf(startValue));
-                Log.d(TAG+"repeat Section", "longStart: "+ longStart+ " && "+" intStart: "+ intStart);
+                Log.d(TAG + "repeat Section", "longStart: " + longStart + " && " + " intStart: " + intStart);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     mediaPlayer.seekTo(longStart, MediaPlayer.SEEK_CLOSEST_SYNC);
-                    Log.d(TAG+"repeat Section", "API 26+");
+                    Log.d(TAG + "repeat Section", "API 26+");
 
                 } else {
-                    Log.d(TAG+"repeat Section", "API 24,25");
+                    Log.d(TAG + "repeat Section", "API 24,25");
                     mediaPlayer.seekTo(intStart);
                 }
 //                State is RepeatSection
@@ -601,7 +629,7 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
                 pressedTimes = 1;
 
                 int intEnd = Integer.parseInt(String.valueOf(endValue));
-                Log.d(TAG+"repeat Section", "intEnd: "+ intEnd);
+                Log.d(TAG + "repeat Section", "intEnd: " + intEnd);
 
                 longStartPoint = longStart;
                 intStartPoint = intStart;
@@ -610,13 +638,58 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
             } else {
                 isRepeatSection = false;
             }
-        } catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
 
     }
 
+    public void showNotification() {
+        Log.d(TAG, " showNotification");
+        Thread myThread;
+        if (isShowNotification && currentSong != null) {
+            myThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    Log.i(TAG + " showNotification", " Current Thread " + Thread.currentThread().getName());
+
+                    Intent mainActivityIntent = new Intent(NotificationService.this, MainActivity.class);
+                    // Create the TaskStackBuilder and add the intent, which inflates the back stack
+                    TaskStackBuilder taskStackBuilder = TaskStackBuilder.create(NotificationService.this);
+                    taskStackBuilder.addNextIntentWithParentStack(mainActivityIntent);
+                    // Get the PendingIntent containing the entire back stack
+                    PendingIntent mainPendingIntent = taskStackBuilder.getPendingIntent(798, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+                    Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.thumb1);
+
+                    NotificationCompat.Builder builder = new NotificationCompat.Builder(NotificationService.this, CHANNEL_ID_1);
+                    builder.setSmallIcon(R.drawable.baseline_music_note_24);
+                    builder.setContentTitle(getSongName());
+                    builder.setStyle(new androidx.media.app.NotificationCompat.MediaStyle());
+                    builder.setPriority(NotificationCompat.PRIORITY_MAX);
+                    builder.setLargeIcon(bitmap);
+                    builder.setContentIntent(mainPendingIntent);
+
+                    Notification notification = builder.build();
+                    NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(NotificationService.this);
+                    if (ActivityCompat.checkSelfPermission(NotificationService.this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        // TODO: Consider calling
+                        //    ActivityCompat#requestPermissions
+                        // here to request the missing permissions, and then overriding
+                        //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                        //                                          int[] grantResults)
+                        // to handle the case where the user grants the permission. See the documentation
+                        // for ActivityCompat#requestPermissions for more details.
+                        return;
+                    }
+                    notificationManagerCompat.notify(798, notification);
+                }
+            });
+
+            myThread.start();
+        }
+    }
     @SuppressLint("DefaultLocale")
     private String formatLongToMMSS(String duration){
         long milliSec = Long.parseLong(duration);
@@ -626,4 +699,12 @@ public class NotificationService extends Service implements  MediaPlayer.OnError
 
         return String.format("%02d:%02d", min, sec);
     }
+    private String getSongName(){
+        String songName = "Song Name";
+        if (currentSong != null){
+            songName = currentSong.getTitle();
+        }
+        return songName;
+    }
+
 }
