@@ -18,6 +18,9 @@ public class ApplicationClass extends Application {
     public static final String ACTION_REPEAT="REPEAT";
     public static final String ACTION_SHUFFLE="SHUFFLE";
     public static final String ACTION_REPEAT_SECTION="REPEAT_SECTION";
+    public static final String ACTION_MINI_PLAY = "ACTION_MINI_PLAY";
+    public static final String ACTION_FINISH = "ACTION_FINISH";
+
 
     @Override
     public void onCreate() {

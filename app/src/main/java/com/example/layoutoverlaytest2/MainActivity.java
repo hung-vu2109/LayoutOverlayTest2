@@ -1,5 +1,6 @@
 package com.example.layoutoverlaytest2;
 
+import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_MINI_PLAY;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_NEXT;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PLAY;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PREV;
@@ -19,8 +20,10 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.IBinder;
 import android.provider.Settings;
+import android.service.autofill.FillEventHistory;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -43,6 +46,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.layoutoverlaytest2.Fragments.MusicFragment;
 import com.example.layoutoverlaytest2.Fragments.VideoFragment;
+import com.example.layoutoverlaytest2.Interfaces.NotificationMediaAction;
 import com.example.layoutoverlaytest2.Models.ButtonMainObject;
 import com.example.layoutoverlaytest2.Models.MiniObject;
 import com.example.layoutoverlaytest2.Models.SongModel;
@@ -53,7 +57,7 @@ import com.google.android.material.navigation.NavigationBarView;
 
 import java.util.ArrayList;
 
-public class MainActivity extends AppCompatActivity implements NavigationBarView.OnItemSelectedListener, ServiceConnection{
+public class MainActivity extends AppCompatActivity implements NavigationBarView.OnItemSelectedListener, ServiceConnection {
 
     private static final String TAG = "MainActivity.java ";
     private static final int REQUEST_CODE = 592431;
@@ -66,7 +70,8 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     ImageButton pauseBtn, nextBtn, prevBtn, loopBtn, shuffleBtn;
     SeekBar seekBar;
     NotificationService notificationService;
-    public static boolean isChecked = false;
+    Handler myHandler = new Handler();
+    Runnable myRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,17 +91,18 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         thumbnail_imageView = findViewById(R.id.top_image);
 
+//        Button
         pauseBtn = findViewById(R.id.btn_player_pauseSong);
         nextBtn = findViewById(R.id.btn_player_nextSong);
         prevBtn = findViewById(R.id.btn_player_prevSong);
 
         loopBtn = findViewById(R.id.btn_player_loop);
-
         shuffleBtn = findViewById(R.id.btn_player_shuffle);
 
         seekBar = findViewById(R.id.seekBar_player);
 
 
+//        Mini UI
         mini_songName = findViewById(R.id.minimalTextView_songName);
         mini_playBtn = findViewById(R.id.image_play);
         mini_closeBtn = findViewById(R.id.image_clear);
@@ -149,19 +155,17 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             Log.d(TAG+"Song list Size", songModelArrayList.size()+"");
         }
 
+
     }
 
     private boolean checkOverlayPer() {
-        if (Settings.canDrawOverlays(MainActivity.this)){
-            Toast.makeText(this, "Overlay Permission OK", Toast.LENGTH_SHORT).show();
-            return true;
-        } else {
-            return false;
-        }
+        Log.d(TAG, "Check Overlay Permission");
+        return Settings.canDrawOverlays(MainActivity.this);
     }
 
     private void requestOverlayPer() {
 
+        Log.d(TAG, "Request Overlay Permission");
         Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:"+getPackageName()));
         startActivity(intent);
 //        finish();
@@ -169,8 +173,10 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     private boolean checkReadStoragePer() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Log.d(TAG, "Check Reading Storage Permission for API 30");
             return Environment.isExternalStorageManager();
         } else {
+            Log.d(TAG, "Check Reading Storage Permission");
             return ContextCompat.checkSelfPermission(MainActivity.this, RUNTIME_PERMISSION[0]) == PackageManager.PERMISSION_GRANTED;
         }
     }
@@ -188,6 +194,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 //            intent.setData(uri);
 //            startActivity(intent);
         } else {
+            Log.d(TAG, "Permission Launcher");
             ActivityResultLauncher<String> requestPermissionLauncher =
                     registerForActivityResult(new ActivityResultContracts.RequestPermission(), new ActivityResultCallback<Boolean>() {
                         @Override
@@ -206,6 +213,18 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             requestPermissionLauncher.launch(RUNTIME_PERMISSION[0]);
         }
 
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (grantResults.length > 0 &&
+        grantResults[0] == PackageManager.PERMISSION_GRANTED){
+            Log.d(TAG+ " onRequestPermissionResult ", "Granted");
+
+        } else {
+            Log.d(TAG+ " onRequestPermissionResult", "Denied");
+        }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
 
     @SuppressLint("NonConstantResourceId")
@@ -230,15 +249,24 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     @Override
     protected void onPause() {
+        Log.d(TAG, "onPause");
         super.onPause();
+        if (notificationService != null) {
+            notificationService.stopUpdateUi();
+        }
         unbindService(this);
     }
 
     @Override
     protected void onResume() {
+        Log.d(TAG, "onResume");
         super.onResume();
         Intent intent = new Intent(this, NotificationService.class);
         bindService(intent, this, BIND_AUTO_CREATE);
+
+
+
+
     }
 
     @Override
@@ -247,15 +275,37 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         notificationService = myBinder.getService();
         Log.e(TAG+"Service Connection", notificationService +"");
 
+        if (notificationService != null) {
+
+//        initial play button view
+            setNegativePlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
+            setNegativeMiniPlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
+
+        }
 
         pauseBtn.setOnClickListener(view -> {
             Log.d(TAG, "play btn clicked");
-            playBtnClicked();
+            Log.d(TAG," isPlaying from service before " + MyInitialMediaSongPlayer.isPlaying);
+            MyInitialMediaSongPlayer.isPlaying = !MyInitialMediaSongPlayer.isPlaying;
+            setNegativePlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
+
+            setNegativeMiniPlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);     // mini play button ui
+
+            playBtnClicked();       // send intent
+
+
         });
 
         nextBtn.setOnClickListener(view -> {
             Log.d(TAG, "next btn clicked");
             nextBtnClicked();
+            setNegativePlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
+            myHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    view.invalidate();
+                }
+            }, 500);
         });
 
         prevBtn.setOnClickListener(view -> {
@@ -277,11 +327,21 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                 new ButtonMainObject(loopBtn, prevBtn, pauseBtn, nextBtn, shuffleBtn),
                 new TextViewMainObject(title_songName, currentTime, endTime),
                 seekBar,
-                new MiniObject(mini_songName, mini_playBtn));
+                new MiniObject(mini_playBtn),
+                mini_songName);
 
+        mini_songName.setSelected(true);
+
+        mini_playBtn.setOnClickListener(view -> {
+            MyInitialMediaSongPlayer.isPlaying = !MyInitialMediaSongPlayer.isPlaying;
+            setNegativeMiniPlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
+            setNegativePlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
+            mini_playBtnClicked();
+
+            updateUI();
+        });
 
         mini_closeBtn.setOnClickListener(view -> {
-
             finish();
         });
     }
@@ -311,14 +371,24 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
 
     @Override
+    protected void onStop() {
+        Log.d(TAG, "onStop");
+        super.onStop();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
     }
 
     private void playBtnClicked(){
+
         Intent intent = new Intent(this, NotificationService.class);
         intent.putExtra(MY_COMMAND, ACTION_PLAY);
         startService(intent);
+
+
+
     }
     private void prevBtnClicked(){
 
@@ -347,10 +417,47 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         startService(intent);
     }
 
+    private void mini_playBtnClicked(){
+
+        Intent intent = new Intent(this, NotificationService.class);
+        intent.putExtra(MY_COMMAND, ACTION_MINI_PLAY);
+        startService(intent);
+    }
     private void showRepeatSectionDialog(){
 
         RepeatSectionDialog dialog = new RepeatSectionDialog(this);
         dialog.setCanceledOnTouchOutside(true);
         dialog.show();
     }
+
+    private void setNegativePlayBtnIcon(boolean isPlaying){
+        if (isPlaying){
+            pauseBtn.setBackgroundResource(R.drawable.baseline_pause_circle_outline_24);
+        } else {
+            pauseBtn.setBackgroundResource(R.drawable.baseline_play_circle_outline_24);
+        }
+    }
+    private void setNegativeMiniPlayBtnIcon(boolean isPlaying){
+        if (isPlaying){
+            mini_playBtn.setBackgroundResource(R.drawable.baseline_pause_24);
+        } else {
+            mini_playBtn.setBackgroundResource(R.drawable.baseline_play_arrow_24);
+        }
+    }
+
+    void updateUI(){
+
+        myRunnable = new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG+" myRunnable", "update UI");
+                if (notificationService != null){
+                    mini_songName.setText(notificationService.getSongName());
+                }
+            }
+        };
+
+        myHandler.postDelayed(myRunnable, 500);
+    }
+
 }

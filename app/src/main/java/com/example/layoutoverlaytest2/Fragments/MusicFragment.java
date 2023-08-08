@@ -69,7 +69,6 @@ public class MusicFragment extends Fragment {
 
 
         fragmentMusicRecyclerView = view.findViewById(R.id.fragment_music_recyclerView);
-        fragmentMusicRecyclerView.setHasFixedSize(true);
 
         noSong_tv = getActivity().findViewById(R.id.fragment_music_tv_noSong);
 
@@ -114,8 +113,9 @@ public class MusicFragment extends Fragment {
                 if (songModelArrayList.size() == 0){
                     noSong_tv.setVisibility(View.VISIBLE);
                 }else {
-                    fragmentMusicRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-                    fragmentMusicRecyclerView.setAdapter(new SongAdapter(getContext(), songModelArrayList));
+//                    fragmentMusicRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+//                    fragmentMusicRecyclerView.setAdapter(new SongAdapter(getContext(), songModelArrayList));
+                    recyclerViewSetAdapter();
                 }
             }
         }
@@ -133,8 +133,14 @@ public class MusicFragment extends Fragment {
 //        } catch (ClassCastException e){
 //            e.printStackTrace();
 //        }
+
     }
 
+    public void recyclerViewSetAdapter(){
+        fragmentMusicRecyclerView.setLayoutManager(new LinearLayoutManager((getContext())));
+        fragmentMusicRecyclerView.setAdapter(new SongAdapter(getContext(), songModelArrayList));
+        fragmentMusicRecyclerView.setHasFixedSize(true);
+    }
     public void passData(ArrayList<SongModel> songModelArrayList){
         dataPassingInterface.onSetDataPassing(songModelArrayList);
     }
