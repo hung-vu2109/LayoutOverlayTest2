@@ -30,6 +30,7 @@
             android:id="@+id/top_image"
             android:layout_width="0dp"
             android:layout_height="0dp"
+            android:contentDescription="big thumbnail"
             android:scaleType="fitCenter"
             app:layout_constraintBottom_toBottomOf="@id/top_image_container"
             app:layout_constraintEnd_toEndOf="@id/top_image_container"
@@ -64,6 +65,7 @@
         </LinearLayout>
         <ImageButton
             android:id="@+id/image_play"
+            android:contentDescription="Mini Play Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
@@ -75,6 +77,7 @@
 
         <ImageView
             android:id="@+id/image_clear"
+            android:contentDescription="Close Activity Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
@@ -130,7 +133,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="15dp">
-                    <TextClock
+                    <TextView
                         android:id="@+id/tv_player_currentTime"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -159,6 +162,7 @@
                 android:layout_centerInParent="true">
                 <ImageButton
                     android:id="@+id/btn_player_prevSong"
+                    android:contentDescription="Prev Button"
                     android:layout_width="60dp"
                     android:layout_height="60dp"
                     android:layout_centerInParent="true"
@@ -167,6 +171,7 @@
 
                 <ImageButton
                     android:id="@+id/btn_player_pauseSong"
+                    android:contentDescription="Play Button"
                     android:layout_width="70dp"
                     android:layout_height="70dp"
                     android:layout_centerInParent="true"
@@ -174,6 +179,7 @@
 
                 <ImageButton
                     android:id="@+id/btn_player_nextSong"
+                    android:contentDescription="Next Button"
                     android:layout_width="50dp"
                     android:layout_height="50dp"
                     android:layout_centerInParent="true"
@@ -182,6 +188,7 @@
 
                 <ImageButton
                     android:id="@+id/btn_player_loop"
+                    android:contentDescription="Loop Button"
                     android:layout_width="50dp"
                     android:layout_height="50dp"
                     android:layout_centerInParent="true"
@@ -190,6 +197,7 @@
 
                 <ImageButton
                     android:id="@+id/btn_player_shuffle"
+                    android:contentDescription="Shuffle Button"
                     android:layout_width="50dp"
                     android:layout_height="50dp"
                     android:layout_centerInParent="true"

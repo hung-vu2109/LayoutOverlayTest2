@@ -41,7 +41,6 @@ import com.example.layoutoverlaytest2.Fragments.MusicFragment;
 import com.example.layoutoverlaytest2.Fragments.VideoFragment;
 import com.example.layoutoverlaytest2.Models.ButtonMainObject;
 import com.example.layoutoverlaytest2.Models.MiniObject;
-import com.example.layoutoverlaytest2.Models.SongModel;
 import com.example.layoutoverlaytest2.Models.TextViewMainObject;
 import com.example.layoutoverlaytest2.Services.NotificationService;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -55,7 +54,6 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     private static final int REQUEST_CODE = 592431;
     static final String[] RUNTIME_PERMISSION = { Manifest.permission.READ_EXTERNAL_STORAGE };
     MusicFragment musicFragment = new MusicFragment();
-    ArrayList<SongModel> songModelArrayList;
     TextView title_songName,currentTime,endTime;
     TextView mini_songName;
     ImageView thumbnail_imageView;
@@ -137,11 +135,11 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     protected void onStart() {
         super.onStart();
         Log.d(TAG, "onStart");
-        if (songModelArrayList == null) {
-            Log.d(TAG+"Data from fragment when itemView is Clicked", "NULL");
-        } else {
-            Log.d(TAG+"Song list Size", songModelArrayList.size()+"");
-        }
+//        if (songModelArrayList == null) {
+//            Log.d(TAG+"Data from fragment when itemView is Clicked", "NULL");
+//        } else {
+//            Log.d(TAG+"Song list Size", songModelArrayList.size()+"");
+//        }
     }
 
     private boolean checkOverlayPer() {

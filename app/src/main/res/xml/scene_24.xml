@@ -187,10 +187,16 @@
             motion:layout_constraintTop_toBottomOf="@id/top_image_container" />
 
         <Constraint android:id="@id/image_play">
+            <Transform
+                android:scaleX="1.3"
+                android:scaleY="1.3"/>
             <PropertySet motion:alpha="1" />
         </Constraint>
 
         <Constraint android:id="@id/image_clear">
+            <Transform
+                android:scaleX="1.3"
+                android:scaleY="1.3"/>
             <PropertySet motion:alpha="1" />
         </Constraint>
 

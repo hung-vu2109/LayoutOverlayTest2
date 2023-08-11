@@ -636,7 +636,6 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 //        End Time Tv UI
         textViewMainObject.getEndTimeTv().setText(formatLongToMMSS(String.valueOf(currentSong.getDuration())));
     }
-    /** adding container to constrain currentTime TextView **/
     private void updateTextViewCurrentTime(TextView currentTimeTv){
 
         currentTimeTv.setText(formatLongToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())));
@@ -659,6 +658,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                 break;
         }
     }
+    /** adding container to constrain Mini SongName TextView **/
     private void updateMiniSongNameUi(TextView miniSongName){
         miniSongName.setText(getSongName());
     }
