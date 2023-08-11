@@ -10,9 +10,7 @@ import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Dialog;
 import android.content.ComponentName;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
@@ -20,16 +18,11 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.os.Handler;
 import android.os.IBinder;
 import android.provider.Settings;
-import android.service.autofill.FillEventHistory;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
@@ -46,7 +39,6 @@ import androidx.core.content.ContextCompat;
 
 import com.example.layoutoverlaytest2.Fragments.MusicFragment;
 import com.example.layoutoverlaytest2.Fragments.VideoFragment;
-import com.example.layoutoverlaytest2.Interfaces.NotificationMediaAction;
 import com.example.layoutoverlaytest2.Models.ButtonMainObject;
 import com.example.layoutoverlaytest2.Models.MiniObject;
 import com.example.layoutoverlaytest2.Models.SongModel;
@@ -62,6 +54,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     private static final String TAG = "MainActivity.java ";
     private static final int REQUEST_CODE = 592431;
     static final String[] RUNTIME_PERMISSION = { Manifest.permission.READ_EXTERNAL_STORAGE };
+    MusicFragment musicFragment = new MusicFragment();
     ArrayList<SongModel> songModelArrayList;
     TextView title_songName,currentTime,endTime;
     TextView mini_songName;
@@ -70,8 +63,6 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     ImageButton pauseBtn, nextBtn, prevBtn, loopBtn, shuffleBtn;
     SeekBar seekBar;
     NotificationService notificationService;
-    Handler myHandler = new Handler();
-    Runnable myRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,7 +98,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         mini_playBtn = findViewById(R.id.image_play);
         mini_closeBtn = findViewById(R.id.image_clear);
 
-//        mini_songName.setSelected(true);
+        mini_songName.setSelected(true);
 
         if(!checkOverlayPer()){
              requestOverlayPer();
@@ -131,8 +122,6 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         if (itemId == R.id.repeatSection_Option){
             Log.d(TAG, "repeatSection Option");
-//            isChecked = !isChecked;
-//            item.setChecked(isChecked);
             showRepeatSectionDialog();
         }
 
@@ -151,11 +140,8 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         if (songModelArrayList == null) {
             Log.d(TAG+"Data from fragment when itemView is Clicked", "NULL");
         } else {
-
             Log.d(TAG+"Song list Size", songModelArrayList.size()+"");
         }
-
-
     }
 
     private boolean checkOverlayPer() {
@@ -201,7 +187,6 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                         public void onActivityResult(Boolean result) {
 
                             if (result) {
-
                                 Toast.makeText(MainActivity.this, "Read permission Ok", Toast.LENGTH_SHORT).show();
                             } else {
 
@@ -220,6 +205,8 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         if (grantResults.length > 0 &&
         grantResults[0] == PackageManager.PERMISSION_GRANTED){
             Log.d(TAG+ " onRequestPermissionResult ", "Granted");
+            musicFragment.resetAdapter();
+            musicFragment.recyclerViewSetAdapter();
 
         } else {
             Log.d(TAG+ " onRequestPermissionResult", "Denied");
@@ -233,15 +220,14 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         switch (item.getItemId()){
             case R.id.nav_fragment_container_music:
                 // music fragment
-                MusicFragment musicFragment = new MusicFragment();
-                getSupportFragmentManager().beginTransaction().replace(R.id.fragmentToReplace_container, musicFragment).addToBackStack("SteveOverlay").commit();
-                Toast.makeText(this, "Music Tap", Toast.LENGTH_SHORT).show();
+                getSupportFragmentManager().beginTransaction().replace(R.id.fragmentToReplace_container, musicFragment).addToBackStack("MusicSteveOverlay").commit();
+//                Toast.makeText(this, "Music Tap", Toast.LENGTH_SHORT).show();
                 break;
             case R.id.nav_fragment_container_video:
                 // video fragment
                 VideoFragment videoFragment = new VideoFragment();
-                getSupportFragmentManager().beginTransaction().replace(R.id.fragmentToReplace_container, videoFragment).addToBackStack("SteveOverlay").commit();
-                Toast.makeText(this, "Video Tap", Toast.LENGTH_SHORT).show();
+                getSupportFragmentManager().beginTransaction().replace(R.id.fragmentToReplace_container, videoFragment).addToBackStack("VideoSteveOverlay").commit();
+//                Toast.makeText(this, "Video Tap", Toast.LENGTH_SHORT).show();
                 break;
         }
         return true;
@@ -251,7 +237,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     protected void onPause() {
         Log.d(TAG, "onPause");
         super.onPause();
-        if (notificationService != null) {
+        if (notificationService != null){
             notificationService.stopUpdateUi();
         }
         unbindService(this);
@@ -263,10 +249,6 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         super.onResume();
         Intent intent = new Intent(this, NotificationService.class);
         bindService(intent, this, BIND_AUTO_CREATE);
-
-
-
-
     }
 
     @Override
@@ -275,37 +257,17 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         notificationService = myBinder.getService();
         Log.e(TAG+"Service Connection", notificationService +"");
 
-        if (notificationService != null) {
-
-//        initial play button view
-            setNegativePlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
-            setNegativeMiniPlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
-
-        }
+//        update ui after activity is destroyed
+        notificationService.setCommandArrive();
 
         pauseBtn.setOnClickListener(view -> {
             Log.d(TAG, "play btn clicked");
-            Log.d(TAG," isPlaying from service before " + MyInitialMediaSongPlayer.isPlaying);
-            MyInitialMediaSongPlayer.isPlaying = !MyInitialMediaSongPlayer.isPlaying;
-            setNegativePlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
-
-            setNegativeMiniPlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);     // mini play button ui
-
             playBtnClicked();       // send intent
-
-
         });
 
         nextBtn.setOnClickListener(view -> {
             Log.d(TAG, "next btn clicked");
             nextBtnClicked();
-            setNegativePlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
-            myHandler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    view.invalidate();
-                }
-            }, 500);
         });
 
         prevBtn.setOnClickListener(view -> {
@@ -327,18 +289,12 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                 new ButtonMainObject(loopBtn, prevBtn, pauseBtn, nextBtn, shuffleBtn),
                 new TextViewMainObject(title_songName, currentTime, endTime),
                 seekBar,
-                new MiniObject(mini_playBtn),
-                mini_songName);
+                new MiniObject(mini_songName, mini_playBtn));
 
         mini_songName.setSelected(true);
 
         mini_playBtn.setOnClickListener(view -> {
-            MyInitialMediaSongPlayer.isPlaying = !MyInitialMediaSongPlayer.isPlaying;
-            setNegativeMiniPlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
-            setNegativePlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
             mini_playBtnClicked();
-
-            updateUI();
         });
 
         mini_closeBtn.setOnClickListener(view -> {
@@ -382,53 +338,73 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     }
 
     private void playBtnClicked(){
-
         Intent intent = new Intent(this, NotificationService.class);
         intent.putExtra(MY_COMMAND, ACTION_PLAY);
         startService(intent);
-
-
-
     }
-    private void prevBtnClicked(){
 
+    private void prevBtnClicked(){
         Intent intent = new Intent(this, NotificationService.class);
         intent.putExtra(MY_COMMAND, ACTION_PREV);
         startService(intent);
     }
-    private void nextBtnClicked(){
 
+    private void nextBtnClicked(){
         Intent intent = new Intent(this, NotificationService.class);
         intent.putExtra(MY_COMMAND, ACTION_NEXT);
         startService(intent);
     }
 
     private void loopBtnClicked(){
-
         Intent intent = new Intent(this, NotificationService.class);
         intent.putExtra(MY_COMMAND, ACTION_REPEAT);
         startService(intent);
     }
 
     private void shuffleBtnClicked(){
-
         Intent intent = new Intent(this, NotificationService.class);
         intent.putExtra(MY_COMMAND, ACTION_SHUFFLE);
         startService(intent);
     }
 
     private void mini_playBtnClicked(){
-
         Intent intent = new Intent(this, NotificationService.class);
         intent.putExtra(MY_COMMAND, ACTION_MINI_PLAY);
         startService(intent);
     }
-    private void showRepeatSectionDialog(){
 
+    private void showRepeatSectionDialog(){
         RepeatSectionDialog dialog = new RepeatSectionDialog(this);
         dialog.setCanceledOnTouchOutside(true);
         dialog.show();
     }
+
+
+
+//    void updateUI(){
+//        myRunnable = new Runnable() {
+//            @Override
+//            public void run() {
+//                Log.d(TAG+" myRunnable", "update UI");
+//                if (notificationService != null){
+//
+//                    title_songName.setText(notificationService.getSongName());
+//                    mini_songName.setText(notificationService.getSongName());
+//                    endTime.setText(notificationService.getEndTime());
+//
+//                    setNegativePlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
+//                    setNegativeMiniPlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
+//
+//                    setLoopBtnIcon(notificationService.getPressedTimes());
+//                    setShuffleBtnIcon(notificationService.getIsShuffleSongs());
+//
+//                    seekBar.setMax(notificationService.getSongDuration());
+//                }
+//            }
+//        };
+//
+//        myHandler.postDelayed(myRunnable, 100);
+//    }
 
     private void setNegativePlayBtnIcon(boolean isPlaying){
         if (isPlaying){
@@ -444,20 +420,28 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             mini_playBtn.setBackgroundResource(R.drawable.baseline_play_arrow_24);
         }
     }
-
-    void updateUI(){
-
-        myRunnable = new Runnable() {
-            @Override
-            public void run() {
-                Log.d(TAG+" myRunnable", "update UI");
-                if (notificationService != null){
-                    mini_songName.setText(notificationService.getSongName());
-                }
-            }
-        };
-
-        myHandler.postDelayed(myRunnable, 500);
+    private void setLoopBtnIcon(int pressedTimes) {
+        switch (pressedTimes) {
+            case 0:
+                // no loop
+                loopBtn.setBackgroundResource(R.drawable.baseline_repeat_24);
+                break;
+            case 1:
+                // loop 1 songs
+                loopBtn.setBackgroundResource(R.drawable.baseline_repeat_one_on_24);
+                break;
+            case 2:
+                // loop all song
+                loopBtn.setBackgroundResource(R.drawable.baseline_repeat_on_24);
+                break;
+        }
     }
+    private void setShuffleBtnIcon(boolean isShuffleSongs){
 
+        if (isShuffleSongs) {
+            shuffleBtn.setBackgroundResource(R.drawable.baseline_shuffle_on_24);
+        } else {
+            shuffleBtn.setBackgroundResource(R.drawable.baseline_shuffle_24);
+        }
+    }
 }

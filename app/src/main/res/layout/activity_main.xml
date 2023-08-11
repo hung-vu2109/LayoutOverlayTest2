@@ -37,12 +37,21 @@
             app:layout_constraintTop_toTopOf="@id/top_image_container"
             app:srcCompat="@drawable/girl_with_cat" />
 
-        <TextView
-            android:id="@+id/minimalTextView_songName"
+        <LinearLayout
+            android:id="@+id/minimalTextViewContainer"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:padding="7dp"
             android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="@id/top_image_container"
+            app:layout_constraintStart_toEndOf="@id/top_image"
+            app:layout_constraintTop_toTopOf="@id/top_image_container">
+
+        <TextView
+            android:id="@+id/minimalTextView_songName"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
             android:text="Song Name"
             android:textColor="@color/white"
             android:textDirection="ltr"
@@ -51,10 +60,8 @@
             android:textStyle="italic"
             android:singleLine="true"
             android:ellipsize="marquee"
-            android:marqueeRepeatLimit="marquee_forever"
-            app:layout_constraintBottom_toBottomOf="@id/top_image_container"
-            app:layout_constraintStart_toEndOf="@id/top_image"
-            app:layout_constraintTop_toTopOf="@id/top_image_container" />
+            android:marqueeRepeatLimit="marquee_forever"/>
+        </LinearLayout>
         <ImageButton
             android:id="@+id/image_play"
             android:layout_width="wrap_content"
@@ -123,7 +130,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="15dp">
-                    <TextView
+                    <TextClock
                         android:id="@+id/tv_player_currentTime"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"

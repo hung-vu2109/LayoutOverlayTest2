@@ -33,7 +33,8 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.provider.MediaStore;
 import android.util.Log;
-import android.view.View;
+import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -49,7 +50,7 @@ import com.example.layoutoverlaytest2.Models.ButtonMainObject;
 import com.example.layoutoverlaytest2.Models.MiniObject;
 import com.example.layoutoverlaytest2.Models.SongModel;
 import com.example.layoutoverlaytest2.Models.TextViewMainObject;
-import com.example.layoutoverlaytest2.MyInitialMediaSongPlayer;
+import com.example.layoutoverlaytest2.Utils.MyInitialMediaSongPlayer;
 import com.example.layoutoverlaytest2.R;
 
 import java.io.File;
@@ -71,6 +72,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     ArrayList<SongModel> currentArrayList = new ArrayList<>();
     private final IBinder mBinder = new MyBinder();
     public Handler handler = new Handler();
+    Thread myThread;
     SongModel currentSong;
     boolean isShuffleSongs = false;
     int pressedTimes = 0;
@@ -79,9 +81,8 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     long longStartPoint = -1;
     int intEndPoint = -1, intStartPoint = -1;
     boolean isShowNotification = true;
-    boolean dataArrive = false;
-    boolean chooseSongFromSongsList = false;
-    boolean mediaState = false;
+    boolean commandArrive = false;
+    boolean isRunning = true;
 
     Runnable updateUiRunnable;
 
@@ -109,7 +110,9 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         initialMusicPlayer();
     }
 
-    @Override
+
+
+        @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "onStartCommand");
 
@@ -134,13 +137,12 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         String actionCommand = intent.getStringExtra(MY_COMMAND);
         if (actionCommand != null) {
 
-            dataArrive = true;
+            commandArrive = true;
 
             switch (actionCommand) {
                 case PLAY_FROM_SONG_LIST:
                     Log.d(TAG, "Play from song list");
                     setInitialDataSource();
-                    chooseSongFromSongsList = true;
                     break;
 
                 case REMOVE_SONG:
@@ -176,12 +178,14 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                     if (pressedTimes == 3) {
                         pressedTimes = 0;
                     }
+                    loopSongState();
                     Log.d(TAG, "pressedTimes Value: " + pressedTimes);
                     break;
 
                 case ACTION_REPEAT_SECTION:
                     Log.d(TAG, "Repeat Section Action");
                     repeatSectionMethod(intent);
+                    repeatSectionRunning();
                     break;
 
                 case ACTION_MINI_PLAY:
@@ -199,7 +203,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         }
 
 
-        return START_STICKY;
+        return super.onStartCommand(intent, flags, startId);
     }
 
 
@@ -239,7 +243,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     public void onDestroy() {
         Log.d(TAG, "onDestroy");
         handler.removeCallbacks(updateUiRunnable);
-        if (currentSong != null) {
+        if (currentSong != null && mediaPlayer != null) {
             mediaPlayer.stop();
             mediaPlayer.release();
             mediaPlayer = null;
@@ -341,167 +345,47 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                                     ButtonMainObject buttonMainObject,
                                     TextViewMainObject textViewMainObject,
                                     SeekBar seekBar,
-                                    MiniObject miniObject,
-                                    TextView mini_songName) {
+                                    MiniObject miniObject) {
 
-//                activity.runOnUiThread(
-                        updateUiRunnable = new Runnable() {
-                    @Override
-                    public void run() {
+        activity.runOnUiThread( updateUiRunnable = new Runnable() {
+            @Override
+            public void run() {
 
-//                        Log.d(TAG+" updateUiFromService", "dataArrive "+dataArrive);
-                       if (dataArrive){
+                if (MyInitialMediaSongPlayer.isStarted){
+                    Log.d(TAG+" updateUiFromService", "Start Update");
+                   if (commandArrive) {
+                       Log.d(TAG+" updateUiFromService", "Start Update"+" CommandArrive");
 
-                           Log.i(TAG + " Current Thread ", Thread.currentThread().getName());
-                           if (currentSong != null && mediaPlayer != null){
+                       updateShuffleBtnUi(buttonMainObject.getShuffleBtn());
+                       updateTextViewMainObject(textViewMainObject);
+                       updateLoopBtnUi(buttonMainObject.getLoopBtn());
+                       updateMiniSongNameUi(miniObject.getMini_songName());
+                       updateSeekbarUi(seekBar, buttonMainObject.getPlayBtn());
 
-//                               PlayBtn UI
-                               if (chooseSongFromSongsList){
-                                   buttonMainObject.getPlayBtn().setBackgroundResource(R.drawable.baseline_pause_circle_outline_24);        // Play Btn
-                                   miniObject.getMini_playBtn().setBackgroundResource(R.drawable.baseline_pause_24);                        // Mini Play Btn
-                                   textViewMainObject.getSongNameTv().setText(getSongName());                                               // Song name Tv
-//                                   mini_songName.setText(getSongName());
-                                   chooseSongFromSongsList = false;
-                               }
+                       commandArrive = false;
 
-                               /********************************************      BUTTON      **************************************************/
-
-//                               ShuffleBtn UI
-                               if (isShuffleSongs) {
-                                   buttonMainObject.getShuffleBtn().setBackgroundResource(R.drawable.baseline_shuffle_on_24);
-                               } else {
-                                   buttonMainObject.getShuffleBtn().setBackgroundResource(R.drawable.baseline_shuffle_24);
-                               }
-                               /********************************************      BUTTON      **************************************************/
-
-//                               LoopBtn UI
-                               switch (pressedTimes) {
-                                   case 0:
-                                       // no loop
-                                       loopAllSongs = false;
-                                       loopOneSong = false;
-                                       Log.d("LoopAllSongs", "No Loop");
-                                       buttonMainObject.getLoopBtn().setBackgroundResource(R.drawable.baseline_repeat_24);
-                                       break;
-                                   case 1:
-                                       // loop 1 songs
-                                       loopAllSongs = false;
-                                       loopOneSong = true;
-                                       loopSongOptions();
-                                       Log.d("LoopAllSongs", "loopCurrentSong ");
-                                       buttonMainObject.getLoopBtn().setBackgroundResource(R.drawable.baseline_repeat_one_on_24);
-                                       break;
-                                   case 2:
-                                       // loop all song
-                                       loopAllSongs = true;
-                                       loopOneSong = false;
-                                       loopSongOptions();
-                                       Log.d("LoopAllSongs", "loopAllSongs: ");
-                                       buttonMainObject.getLoopBtn().setBackgroundResource(R.drawable.baseline_repeat_on_24);
-                                       break;
-                               }
-                               /********************************************      BUTTON      **************************************************/
-
-//                               Song Name Tv UI
-                               textViewMainObject.getSongNameTv().setText(getSongName());
-                               /********************************************     TEXTVIEW     **************************************************/
-
-
-
-//                               End Time Tv UI
-                               textViewMainObject.getEndTimeTv().setText(formatLongToMMSS(String.valueOf(currentSong.getDuration())));
-                               /********************************************     TEXTVIEW     **************************************************/
-
-//                               SeekBar UI
-                               seekBar.setMax(mediaPlayer.getDuration());
-                               seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                                   @Override
-                                   public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                                       if (b) {
-                                           try {
-
-                                               mediaPlayer.seekTo(i);
-                                               mediaPlayer.start();
-                                           } catch (Exception e){
-                                               e.printStackTrace();
-                                           }
-                                       }
-                                   }
-
-                                   @Override
-                                   public void onStartTrackingTouch(SeekBar seekBar) {
-
-                                   }
-
-                                   @Override
-                                   public void onStopTrackingTouch(SeekBar seekBar) {
-
-                                   }
-                               });
-                               /********************************************     SEEKBAR     **************************************************/
-
-                               Log.d(TAG+" updateUiFromService", "Log checking .........");
-
-//                               Mini UI
-//                               miniObject.getMini_songName().setText(getSongName());
-//                               miniObject.getMini_songName().setSelected(true);
-                               /********************************************     MINI UI     **************************************************/
-
-                           }
-
-
-                           dataArrive = false;
-                           Log.d(TAG+" updateUiFromService", "dataArrive "+dataArrive+ " inside");
-                       }
-
+                   }
 /*************************************************************************  Infinity Loop  ************************************************************************/
 
+                    updatePlayBtnUi(buttonMainObject.getPlayBtn());
+                    updateMiniPlayBtnUi(miniObject.getMini_playBtn());
+                    updateTextViewCurrentTime(textViewMainObject.getCurrentTimeTv());
+                    updateSeekbarUiCurrentPosition(seekBar);
+               }
 
-//                      SeekBar Code Start
-                        if (currentSong != null && mediaPlayer != null) {
-                            seekBar.setProgress(mediaPlayer.getCurrentPosition());
-                        }
-                        /********************************************     SEEKBAR     **************************************************/
+                Log.d(TAG+" updateUiFromService", " is Running...");
+                try {
+                    handler.postDelayed(updateUiRunnable, 200);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
 
+            }
+        });
 
-//                      Start Time Tv UI
-                        textViewMainObject.getCurrentTimeTv().setText(formatLongToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())));
-                        /********************************************     TEXTVIEW     **************************************************/
-
-
-//                      repeatSection
-                        if (isRepeatSection && pressedTimes == 1) {
-                            if (currentSong != null &&
-                                    formatLongToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())).equals(formatLongToMMSS(String.valueOf(intEndPoint)))) {
-
-                                Log.d(TAG + "repeat Section State is", isRepeatSection + "");
-                                Log.d(TAG + "repeat Section State pressTime", pressedTimes + "");
-                                Log.d(TAG + "repeat Section State current Duration", mediaPlayer.getCurrentPosition() + "");
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-
-                                    Log.d(TAG + "repeat Section State Android O(API 26)+ is", isRepeatSection + " inside");
-                                    mediaPlayer.seekTo(longStartPoint, MediaPlayer.SEEK_CLOSEST_SYNC);
-                                } else {
-                                    mediaPlayer.seekTo(intStartPoint);
-                                }
-                            }
-                        } else {
-                            isRepeatSection = false;
-                        }
-                        /********************************************    REPEAT SECTION    **************************************************/
-
-
-                        Log.d(TAG+" updateUiFromService", " is Running...");
-                        try {
-                            handler.postDelayed(updateUiRunnable, 1000);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-
-                    }
-                        };
-//                );
-
+    }
+    public void stopUpdateUi(){
+        handler.removeCallbacks(updateUiRunnable);
     }
 
 
@@ -514,8 +398,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
             mediaPlayer.prepare();
             mediaPlayer.start();
 
-            MyInitialMediaSongPlayer.isPlaying = true;
-
+            MyInitialMediaSongPlayer.isStarted = true;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -532,21 +415,16 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
             }
             MyInitialMediaSongPlayer.starterIndex -= 1;
         }
-
-
-//        currentSong = songModelArrayList.get(MyInitialMediaSongPlayer.starterIndex);
     }
 
     private void playOrPauseSong() {
-        if (currentSong != null) {
+        if (currentSong != null && MyInitialMediaSongPlayer.isStarted) {
             if (mediaPlayer.isPlaying()) {
                 mediaPlayer.pause();
-                MyInitialMediaSongPlayer.isPlaying = false;
                 Log.d(TAG + "pauseOrPlayMethod", "Pausing");
 
             } else {
                 mediaPlayer.start();
-                MyInitialMediaSongPlayer.isPlaying = true;
                 Log.d(TAG + "pauseOrPlayMethod", "Playing");
             }
         } else {
@@ -568,12 +446,12 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     }
 
 
-    private void loopSongOptions() {
+    public void loopSongOptions() {
         mediaPlayer.setOnCompletionListener(mediaPlayer -> {
             if (loopAllSongs) {
                 Log.d(TAG + "", "Repeat all song with shuffle mode");
                 playNextSong();
-                dataArrive = true;
+                setCommandArrive();
                 setInitialDataSource();
             }
             if (loopOneSong){
@@ -647,6 +525,43 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
 
     }
+    private void repeatSectionRunning(){
+        myThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (isRepeatSection){
+
+                    Log.d(TAG+ "repeatSection", " is running");
+                    if (isRepeatSection && pressedTimes == 1) {
+                        if (currentSong != null &&
+                                formatLongToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())).equals(formatLongToMMSS(String.valueOf(intEndPoint)))) {
+
+                            Log.d(TAG + "repeat Section State is", isRepeatSection + "");
+                            Log.d(TAG + "repeat Section State pressTime", pressedTimes + "");
+                            Log.d(TAG + "repeat Section State current Duration", mediaPlayer.getCurrentPosition() + "");
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+
+                                Log.d(TAG + "repeat Section State Android O(API 26)+ is", isRepeatSection + " inside");
+                                mediaPlayer.seekTo(longStartPoint, MediaPlayer.SEEK_CLOSEST_SYNC);
+                            } else {
+                                mediaPlayer.seekTo(intStartPoint);
+                            }
+                        }
+                    } else {
+                        isRepeatSection = false;
+                    }
+
+                    try {
+                        Thread.sleep(500);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                }
+            }
+        });
+        myThread.start();
+    }
 
     public void showNotification() {
         Thread myThread;
@@ -698,6 +613,98 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
         }
     }
+
+    /*************************************************************************  Update Ui Tag  ************************************************************************/
+    private void updatePlayBtnUi(ImageButton playBtn){
+//          PlayBtn UI
+            if (mediaPlayer.isPlaying()) {
+                playBtn.setBackgroundResource(R.drawable.baseline_pause_circle_outline_24);
+            } else {
+                playBtn.setBackgroundResource(R.drawable.baseline_play_circle_outline_24);
+            }
+    }
+    private void updateShuffleBtnUi(ImageButton shuffleBtn){
+        if (isShuffleSongs) {
+            shuffleBtn.setBackgroundResource(R.drawable.baseline_shuffle_on_24);
+        } else {
+            shuffleBtn.setBackgroundResource(R.drawable.baseline_shuffle_24);
+        }
+    }
+    private void updateTextViewMainObject(TextViewMainObject textViewMainObject){
+//        Song Name Tv UI
+        textViewMainObject.getSongNameTv().setText(getSongName());
+//        End Time Tv UI
+        textViewMainObject.getEndTimeTv().setText(formatLongToMMSS(String.valueOf(currentSong.getDuration())));
+    }
+    /** adding container to constrain currentTime TextView **/
+    private void updateTextViewCurrentTime(TextView currentTimeTv){
+
+        currentTimeTv.setText(formatLongToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())));
+    }
+    private void updateLoopBtnUi(ImageButton loopBtn){
+
+//        LoopBtn UI
+        switch (pressedTimes) {
+            case 0:
+                // no loop
+                loopBtn.setBackgroundResource(R.drawable.baseline_repeat_24);
+                break;
+            case 1:
+                // loop 1 songs
+                loopBtn.setBackgroundResource(R.drawable.baseline_repeat_one_on_24);
+                break;
+            case 2:
+                // loop all song
+                loopBtn.setBackgroundResource(R.drawable.baseline_repeat_on_24);
+                break;
+        }
+    }
+    private void updateMiniSongNameUi(TextView miniSongName){
+        miniSongName.setText(getSongName());
+    }
+    private void updateMiniPlayBtnUi(ImageView miniPlayBtn){
+
+        if (mediaPlayer.isPlaying()) {
+            miniPlayBtn.setBackgroundResource(R.drawable.baseline_pause_24);
+        } else {
+            miniPlayBtn.setBackgroundResource(R.drawable.baseline_play_arrow_24);
+        }
+    }
+    private void updateSeekbarUi(SeekBar seekBar, ImageButton playBtn){
+
+//                               SeekBar UI
+        seekBar.setMax(mediaPlayer.getDuration());
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                if (b) {
+                    try {
+
+                        playBtn.setBackgroundResource(R.drawable.baseline_play_circle_outline_24);
+                        mediaPlayer.seekTo(i);
+                        mediaPlayer.start();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+    }
+    private void updateSeekbarUiCurrentPosition(SeekBar seekBar){
+
+        seekBar.setProgress(mediaPlayer.getCurrentPosition());
+    }
+    /*************************************************************************  Update Ui Tag  ************************************************************************/
     @SuppressLint("DefaultLocale")
     private String formatLongToMMSS(String duration){
         long milliSec = Long.parseLong(duration);
@@ -707,16 +714,40 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
         return String.format("%02d:%02d", min, sec);
     }
-    public String getSongName(){
+    private String getSongName(){
         String songName = "Song Name";
         if (currentSong != null){
             songName = currentSong.getTitle();
         }
         return songName;
     }
-
-    public void stopUpdateUi(){
-        handler.removeCallbacks(updateUiRunnable);
+    public void setCommandArrive(){
+        commandArrive = true;
     }
+    private void loopSongState(){
 
+//        LoopBtn UI
+        switch (pressedTimes) {
+            case 0:
+                // no loop
+                loopAllSongs = false;
+                loopOneSong = false;
+                Log.d("LoopAllSongs", "No Loop");
+                break;
+            case 1:
+                // loop 1 songs
+                loopAllSongs = false;
+                loopOneSong = true;
+                loopSongOptions();
+                Log.d("LoopAllSongs", "loopCurrentSong ");
+                break;
+            case 2:
+                // loop all song
+                loopAllSongs = true;
+                loopOneSong = false;
+                loopSongOptions();
+                Log.d("LoopAllSongs", "loopAllSongs: ");
+                break;
+        }
+    }
 }

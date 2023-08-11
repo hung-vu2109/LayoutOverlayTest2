@@ -7,14 +7,14 @@ public class MiniObject {
     TextView mini_songName;
     ImageView mini_playBtn;
 
-    public MiniObject(ImageView mini_playBtn) {
-//        this.mini_songName = mini_songName;
+    public MiniObject(TextView mini_songName,ImageView mini_playBtn) {
+        this.mini_songName = mini_songName;
         this.mini_playBtn = mini_playBtn;
     }
 
-//    public TextView getMini_songName() {
-//        return mini_songName;
-//    }
+    public TextView getMini_songName() {
+        return mini_songName;
+    }
 
     public ImageView getMini_playBtn() {
         return mini_playBtn;

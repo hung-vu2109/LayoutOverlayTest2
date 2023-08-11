@@ -131,7 +131,7 @@
 
 
         <Constraint
-            android:id="@+id/minimalTextView_songName"
+            android:id="@+id/minimalTextViewContainer"
             android:layout_width="0dp"
             android:layout_height="0dp"
             motion:layout_constraintTop_toTopOf="@id/top_image_container"
@@ -222,7 +222,7 @@
             android:layout_marginBottom="596dp" />
 
         <Constraint
-            android:id="@+id/minimalTextView_songName"
+            android:id="@+id/minimalTextViewContainer"
             motion:layout_constraintStart_toEndOf="@id/top_image"
             android:layout_width="150dp"
             android:layout_height="45dp"

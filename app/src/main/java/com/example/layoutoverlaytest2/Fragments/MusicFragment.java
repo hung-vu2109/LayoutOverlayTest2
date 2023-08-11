@@ -25,21 +25,9 @@ import com.example.layoutoverlaytest2.R;
 import java.io.File;
 import java.util.ArrayList;
 
-///**
-// * A simple {@link Fragment} subclass.
-// * Use the {@link MusicFragment#newInstance} factory method to
-// * create an instance of this fragment.
-// */
+
 public class MusicFragment extends Fragment {
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-//    private static final String ARG_PARAM1 = "param1";
-//    private static final String ARG_PARAM2 = "param2";
-
-    // TODO: Rename and change types of parameters
-//    private String mParam1;
-//    private String mParam2;
     View view;
     ArrayList<SongModel> songModelArrayList = new ArrayList<>();
 
@@ -70,7 +58,7 @@ public class MusicFragment extends Fragment {
 
         fragmentMusicRecyclerView = view.findViewById(R.id.fragment_music_recyclerView);
 
-        noSong_tv = getActivity().findViewById(R.id.fragment_music_tv_noSong);
+        noSong_tv = requireActivity().findViewById(R.id.fragment_music_tv_noSong);
 
 
 //      Access media files from shared storage
@@ -88,7 +76,7 @@ public class MusicFragment extends Fragment {
         String selection = MediaStore.Audio.Media.IS_MUSIC + "!=0";
         String sortOrder = MediaStore.Audio.Media.TITLE + " ASC";
 
-        try (Cursor cursor = getContext().getContentResolver().query(collectionUri, projection, selection, null, sortOrder)){
+        try (Cursor cursor = requireContext().getContentResolver().query(collectionUri, projection, selection, null, sortOrder)){
 
 //            int thumbnailColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID);
 //            int _thumbnailId = cursor.getInt(thumbnailColumn);
@@ -113,8 +101,6 @@ public class MusicFragment extends Fragment {
                 if (songModelArrayList.size() == 0){
                     noSong_tv.setVisibility(View.VISIBLE);
                 }else {
-//                    fragmentMusicRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-//                    fragmentMusicRecyclerView.setAdapter(new SongAdapter(getContext(), songModelArrayList));
                     recyclerViewSetAdapter();
                 }
             }
@@ -140,6 +126,9 @@ public class MusicFragment extends Fragment {
         fragmentMusicRecyclerView.setLayoutManager(new LinearLayoutManager((getContext())));
         fragmentMusicRecyclerView.setAdapter(new SongAdapter(getContext(), songModelArrayList));
         fragmentMusicRecyclerView.setHasFixedSize(true);
+    }
+    public void resetAdapter(){
+        fragmentMusicRecyclerView.setAdapter(null);
     }
     public void passData(ArrayList<SongModel> songModelArrayList){
         dataPassingInterface.onSetDataPassing(songModelArrayList);

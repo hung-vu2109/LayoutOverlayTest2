@@ -1,18 +1,14 @@
 package com.example.layoutoverlaytest2.MusicFragmentAdapter;
 
-import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PLAY;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_SONG_LIST;
 import static com.example.layoutoverlaytest2.ApplicationClass.REMOVE_SONG;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,10 +18,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.layoutoverlaytest2.BroadcastReceiver.NotificationReceiver;
-import com.example.layoutoverlaytest2.MainActivity;
 import com.example.layoutoverlaytest2.Models.SongModel;
-import com.example.layoutoverlaytest2.MyInitialMediaSongPlayer;
+import com.example.layoutoverlaytest2.Utils.MyInitialMediaSongPlayer;
 import com.example.layoutoverlaytest2.R;
 import com.example.layoutoverlaytest2.Services.NotificationService;
 
