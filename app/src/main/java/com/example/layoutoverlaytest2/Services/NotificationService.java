@@ -82,7 +82,6 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     int intEndPoint = -1, intStartPoint = -1;
     boolean isShowNotification = true;
     boolean commandArrive = false;
-    boolean isRunning = true;
 
     Runnable updateUiRunnable;
 
@@ -487,13 +486,19 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
             long startValue = -1, endValue = -1;
 
-            for (long i : hashMap.keySet()) {
-                Log.d("start value", i + "");
-                startValue = i;
-                endValue = hashMap.get(i);
-                Log.d("end value", hashMap.get(i) + "");
+            if (currentSong != null && hashMap.size() == 1) {
+                for (long i : hashMap.keySet()) {
+                    Log.d("start value", i + "");
+                    startValue = i;
+                    endValue = hashMap.get(i);
+                    Log.d("end value", hashMap.get(i) + "");
+                }
+            } else {
+                Log.d("repeat Section", "currentSong = null || hashMap.size() != 1");
+                isRepeatSection = false;
+                return;
             }
-            if (mediaPlayer != null && !hashMap.isEmpty() && startValue >= 0 && endValue >= 0 && hashMap.size() == 1 && startValue != endValue) {
+            if (startValue >= 0 && endValue >= 0 && startValue != endValue) {
                 long longStart = Long.parseLong(String.valueOf(startValue));
                 int intStart = Integer.parseInt(String.valueOf(startValue));
                 Log.d(TAG + "repeat Section", "longStart: " + longStart + " && " + " intStart: " + intStart);

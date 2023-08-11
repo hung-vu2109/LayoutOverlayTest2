@@ -55,7 +55,7 @@ public class RepeatSectionDialog extends Dialog {
             @Override
             public void onClick(View view) {
                 HashMap<Long, Long> hashMap = new HashMap<Long, Long>();
-                if (minStartText != null && minStartText.length() > 0) {
+                if (minStartText.length() > 0 && minEndText.length() > 0 && secStartText.length() > 0 && secEndText.length() > 0) {
 //                    Start Point
                     long milliStart = ((Long.parseLong(String.valueOf(minStartText.getText()))*60) +
                             Long.parseLong(String.valueOf(secStartText.getText())))*1000;
