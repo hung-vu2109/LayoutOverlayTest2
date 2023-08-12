@@ -1,7 +1,6 @@
 package com.example.layoutoverlaytest2.Services;
 
 
-import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_FINISH;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_MINI_PLAY;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_NEXT;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PLAY;
@@ -9,6 +8,7 @@ import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PREV;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_REPEAT;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_REPEAT_SECTION;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_SHUFFLE;
+import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_STOP;
 import static com.example.layoutoverlaytest2.ApplicationClass.CHANNEL_ID_1;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_SONG_LIST;
@@ -26,12 +26,16 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
+import android.media.session.MediaSession;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.provider.MediaStore;
+import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaSessionCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -73,6 +77,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     private final IBinder mBinder = new MyBinder();
     public Handler handler = new Handler();
     Thread myThread;
+    Thread myNotificationThread;
     SongModel currentSong;
     boolean isShuffleSongs = false;
     int pressedTimes = 0;
@@ -84,6 +89,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     boolean commandArrive = false;
 
     Runnable updateUiRunnable;
+    MediaSession mediaSession;
 
     public NotificationService() {
     }
@@ -111,7 +117,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
 
 
-        @Override
+    @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "onStartCommand");
 
@@ -152,18 +158,21 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                 case ACTION_PLAY:
                     Log.d(TAG, "Play Action");
                     playOrPauseSong();
+                    updateNotificationView();
                     break;
 
                 case ACTION_NEXT:
                     Log.d(TAG, "Next Action");
                     playNextSong();
                     setInitialDataSource();
-
+                    updateNotificationView();
                     break;
+
                 case ACTION_PREV:
                     Log.d(TAG, "Prev Action");
                     playPrevSong();
                     setInitialDataSource();
+                    updateNotificationView();
                     break;
 
                 case ACTION_SHUFFLE:
@@ -178,6 +187,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                         pressedTimes = 0;
                     }
                     loopSongState();
+                    updateNotificationView();
                     Log.d(TAG, "pressedTimes Value: " + pressedTimes);
                     break;
 
@@ -190,10 +200,12 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                 case ACTION_MINI_PLAY:
                     Log.d(TAG, "Mini Play Action");
                     playOrPauseSong();
+                    updateNotificationView();
                     break;
 
-                case ACTION_FINISH:
-                    Log.d(TAG, "Finish Action");
+                case ACTION_STOP:
+                    Log.d(TAG, "Stop Action");
+                    stopServiceAction();
                     break;
 
             }
@@ -210,7 +222,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     @Override
     public boolean onUnbind(Intent intent) {
         Log.d(TAG, "onUnBind");
-        showNotification();
+
         return super.onUnbind(intent);
     }
 
@@ -307,7 +319,10 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                 }
             }
 
+        } finally {
+
         }
+
         Log.d(TAG + "query files", "finished !!");
     }
 
@@ -398,6 +413,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
             mediaPlayer.start();
 
             MyInitialMediaSongPlayer.isStarted = true;
+            MyInitialMediaSongPlayer.isPlaying = true;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -420,10 +436,12 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         if (currentSong != null && MyInitialMediaSongPlayer.isStarted) {
             if (mediaPlayer.isPlaying()) {
                 mediaPlayer.pause();
+                MyInitialMediaSongPlayer.isPlaying = false;
                 Log.d(TAG + "pauseOrPlayMethod", "Pausing");
 
             } else {
                 mediaPlayer.start();
+                MyInitialMediaSongPlayer.isPlaying = true;
                 Log.d(TAG + "pauseOrPlayMethod", "Playing");
             }
         } else {
@@ -568,15 +586,14 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         myThread.start();
     }
 
-    public void showNotification() {
-        Thread myThread;
+    public void showNotification(int intPlayIcon, int intLoopIcon) {
         if (isShowNotification && currentSong != null) {
             Log.d(TAG, " showNotification");
-            myThread = new Thread(new Runnable() {
+            myNotificationThread = new Thread(new Runnable() {
                 @Override
                 public void run() {
                     Log.i(TAG + " showNotification", " Current Thread " + Thread.currentThread().getName());
-
+                    getSongName();
                     Intent mainActivityIntent = new Intent(NotificationService.this, MainActivity.class);
                     // Create the TaskStackBuilder and add the intent, which inflates the back stack
                     TaskStackBuilder taskStackBuilder = TaskStackBuilder.create(NotificationService.this);
@@ -589,6 +606,18 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                     Intent prevIntent = new Intent(NotificationService.this, NotificationReceiver.class).setAction(ACTION_PREV);
                     PendingIntent prevPending = PendingIntent.getBroadcast(NotificationService.this, REQUEST_CODE, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
+                    Intent playIntent = new Intent(NotificationService.this, NotificationReceiver.class).setAction(ACTION_PLAY);
+                    PendingIntent playPending = PendingIntent.getBroadcast(NotificationService.this, REQUEST_CODE, playIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+                    Intent nextIntent = new Intent(NotificationService.this, NotificationReceiver.class).setAction(ACTION_NEXT);
+                    PendingIntent nextPending = PendingIntent.getBroadcast(NotificationService.this, REQUEST_CODE, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+                    Intent loopIntent = new Intent(NotificationService.this, NotificationReceiver.class).setAction(ACTION_REPEAT);
+                    PendingIntent loopPending = PendingIntent.getBroadcast(NotificationService.this, REQUEST_CODE, loopIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+                    Intent stopIntent = new Intent(NotificationService.this, NotificationReceiver.class).setAction(ACTION_REPEAT);
+                    PendingIntent stopPending = PendingIntent.getBroadcast(NotificationService.this, REQUEST_CODE, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
                     NotificationCompat.Builder builder = new NotificationCompat.Builder(NotificationService.this, CHANNEL_ID_1);
                     builder.setSmallIcon(R.drawable.baseline_music_note_24);
                     builder.setContentTitle(getSongName());
@@ -598,6 +627,11 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                     builder.setContentIntent(mainPendingIntent);
                     builder.setOngoing(true);
                     builder.addAction(R.drawable.baseline_skip_previous_24, "Previous Song", prevPending);
+                    builder.addAction(intPlayIcon, "Play Song", playPending);
+                    builder.addAction(R.drawable.baseline_skip_next_24, "Next Song", nextPending);
+                    builder.addAction(intLoopIcon, "Repeat Song", loopPending);
+                    builder.addAction(R.drawable.baseline_clear_24, "Stop Service", stopPending);
+
 
                     Notification notification = builder.build();
                     NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(NotificationService.this);
@@ -614,11 +648,41 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                     notificationManagerCompat.notify(798, notification);
                 }
             });
-            myThread.start();
+            myNotificationThread.start();
 
         }
     }
 
+    private void updateNotificationView(){
+
+        switch (pressedTimes) {
+            case 0:
+                // no loop
+                if (MyInitialMediaSongPlayer.isPlaying){
+                    showNotification(R.drawable.baseline_pause_24, R.drawable.baseline_repeat_24);
+                } else {
+                    showNotification(R.drawable.baseline_play_arrow_24, R.drawable.baseline_repeat_24);
+                }
+                break;
+            case 1:
+                // loop 1 songs
+                if (MyInitialMediaSongPlayer.isPlaying){
+                    showNotification(R.drawable.baseline_pause_24, R.drawable.baseline_repeat_one_on_24);
+                } else {
+                    showNotification(R.drawable.baseline_play_arrow_24, R.drawable.baseline_repeat_one_on_24);
+                }
+                break;
+            case 2:
+                // loop all song
+                if (MyInitialMediaSongPlayer.isPlaying){
+                    showNotification(R.drawable.baseline_pause_24, R.drawable.baseline_repeat_on_24);
+                } else {
+                    showNotification(R.drawable.baseline_play_arrow_24, R.drawable.baseline_repeat_on_24);
+                }
+                break;
+        }
+
+    }
     /*************************************************************************  Update Ui Tag  ************************************************************************/
     private void updatePlayBtnUi(ImageButton playBtn){
 //          PlayBtn UI
@@ -726,6 +790,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         }
         return songName;
     }
+
     public void setCommandArrive(){
         commandArrive = true;
     }
@@ -754,5 +819,8 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                 Log.d("LoopAllSongs", "loopAllSongs: ");
                 break;
         }
+    }
+    private void stopServiceAction(){
+        stopSelf();
     }
 }

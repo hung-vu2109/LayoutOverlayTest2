@@ -37,9 +37,9 @@
             <intent-filter>
                 <action android:name="NEXT"/>
                 <action android:name="PREV"/>
-                <action android:name="PLAy"/>
-                <action android:name="LOOP"/>
-                <action android:name="CLOSE"/>
+                <action android:name="PLAY"/>
+                <action android:name="REPEAT"/>
+                <action android:name="STOP"/>
             </intent-filter>
         </receiver>
     </application>
