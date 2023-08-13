@@ -6,12 +6,16 @@ import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PLAY;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PREV;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_REPEAT;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_SHUFFLE;
+import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_STOP;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -46,8 +50,6 @@ import com.example.layoutoverlaytest2.Services.NotificationService;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
 
-import java.util.ArrayList;
-
 public class MainActivity extends AppCompatActivity implements NavigationBarView.OnItemSelectedListener, ServiceConnection {
 
     private static final String TAG = "MainActivity.java ";
@@ -66,8 +68,8 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate");
-
         setContentView(R.layout.activity_main);
+
 
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_nav);
         bottomNavigationView.setOnItemSelectedListener(this);
@@ -332,6 +334,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     @Override
     protected void onDestroy() {
+        Log.d(TAG, "onDestroy");
         super.onDestroy();
     }
 
@@ -377,69 +380,4 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         dialog.show();
     }
 
-
-
-//    void updateUI(){
-//        myRunnable = new Runnable() {
-//            @Override
-//            public void run() {
-//                Log.d(TAG+" myRunnable", "update UI");
-//                if (notificationService != null){
-//
-//                    title_songName.setText(notificationService.getSongName());
-//                    mini_songName.setText(notificationService.getSongName());
-//                    endTime.setText(notificationService.getEndTime());
-//
-//                    setNegativePlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
-//                    setNegativeMiniPlayBtnIcon(MyInitialMediaSongPlayer.isPlaying);
-//
-//                    setLoopBtnIcon(notificationService.getPressedTimes());
-//                    setShuffleBtnIcon(notificationService.getIsShuffleSongs());
-//
-//                    seekBar.setMax(notificationService.getSongDuration());
-//                }
-//            }
-//        };
-//
-//        myHandler.postDelayed(myRunnable, 100);
-//    }
-
-    private void setNegativePlayBtnIcon(boolean isPlaying){
-        if (isPlaying){
-            pauseBtn.setBackgroundResource(R.drawable.baseline_pause_circle_outline_24);
-        } else {
-            pauseBtn.setBackgroundResource(R.drawable.baseline_play_circle_outline_24);
-        }
-    }
-    private void setNegativeMiniPlayBtnIcon(boolean isPlaying){
-        if (isPlaying){
-            mini_playBtn.setBackgroundResource(R.drawable.baseline_pause_24);
-        } else {
-            mini_playBtn.setBackgroundResource(R.drawable.baseline_play_arrow_24);
-        }
-    }
-    private void setLoopBtnIcon(int pressedTimes) {
-        switch (pressedTimes) {
-            case 0:
-                // no loop
-                loopBtn.setBackgroundResource(R.drawable.baseline_repeat_24);
-                break;
-            case 1:
-                // loop 1 songs
-                loopBtn.setBackgroundResource(R.drawable.baseline_repeat_one_on_24);
-                break;
-            case 2:
-                // loop all song
-                loopBtn.setBackgroundResource(R.drawable.baseline_repeat_on_24);
-                break;
-        }
-    }
-    private void setShuffleBtnIcon(boolean isShuffleSongs){
-
-        if (isShuffleSongs) {
-            shuffleBtn.setBackgroundResource(R.drawable.baseline_shuffle_on_24);
-        } else {
-            shuffleBtn.setBackgroundResource(R.drawable.baseline_shuffle_24);
-        }
-    }
 }

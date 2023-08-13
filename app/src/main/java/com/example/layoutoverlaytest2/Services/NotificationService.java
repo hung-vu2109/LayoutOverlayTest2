@@ -30,12 +30,11 @@ import android.media.session.MediaSession;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Process;
 import android.provider.MediaStore;
-import android.support.v4.media.MediaMetadataCompat;
-import android.support.v4.media.session.MediaSessionCompat;
-import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -70,13 +69,11 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     static final String BUNDLE_NAME = "MY_BUNDLE";
     static final String DATA_KEY = "SONG_BUNDLE";
     private static final int REQUEST_CODE = 592431;
-    static final String[] RUNTIME_PERMISSION = {Manifest.permission.READ_EXTERNAL_STORAGE};
     public MediaPlayer mediaPlayer = MyInitialMediaSongPlayer.getInstance();
     ArrayList<SongModel> songModelArrayList = new ArrayList<>();
-    ArrayList<SongModel> currentArrayList = new ArrayList<>();
     private final IBinder mBinder = new MyBinder();
     public Handler handler = new Handler();
-    Thread myThread;
+    Thread repeatSectionThread;
     Thread myNotificationThread;
     SongModel currentSong;
     boolean isShuffleSongs = false;
@@ -86,19 +83,17 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     long longStartPoint = -1;
     int intEndPoint = -1, intStartPoint = -1;
     boolean isShowNotification = true;
+    boolean showNotificationStarted = false;
     boolean commandArrive = false;
 
-    Runnable updateUiRunnable;
+    Runnable updateUiRunnable, notificationRunnable;
     MediaSession mediaSession;
-
-    public NotificationService() {
-    }
+    NotificationManagerCompat notificationManagerCompat;
 
 
     @Override
     public void onCreate() {
         super.onCreate();
-
         Log.d(TAG, " onCreate");
 
 //        check song list from adapter
@@ -110,8 +105,6 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 //                Log.d(TAG, String.valueOf(i));
 //            }
         }
-
-
         initialMusicPlayer();
     }
 
@@ -120,6 +113,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "onStartCommand");
+
 
 ////        get song list from MusicFragment
 //        try {
@@ -165,14 +159,12 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                     Log.d(TAG, "Next Action");
                     playNextSong();
                     setInitialDataSource();
-                    updateNotificationView();
                     break;
 
                 case ACTION_PREV:
                     Log.d(TAG, "Prev Action");
                     playPrevSong();
                     setInitialDataSource();
-                    updateNotificationView();
                     break;
 
                 case ACTION_SHUFFLE:
@@ -200,12 +192,14 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                 case ACTION_MINI_PLAY:
                     Log.d(TAG, "Mini Play Action");
                     playOrPauseSong();
-                    updateNotificationView();
                     break;
 
                 case ACTION_STOP:
                     Log.d(TAG, "Stop Action");
-                    stopServiceAction();
+                    stopUpdateUi();
+                    stopShowNotification();
+                    onDestroy();
+                    stopMyProcess();
                     break;
 
             }
@@ -222,7 +216,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     @Override
     public boolean onUnbind(Intent intent) {
         Log.d(TAG, "onUnBind");
-
+        updateNotificationView();
         return super.onUnbind(intent);
     }
 
@@ -253,13 +247,14 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     @Override
     public void onDestroy() {
         Log.d(TAG, "onDestroy");
-        handler.removeCallbacks(updateUiRunnable);
-        if (currentSong != null && mediaPlayer != null) {
+        stopUpdateUi();
+        if (currentSong != null) {
             mediaPlayer.stop();
             mediaPlayer.release();
-            mediaPlayer = null;
         }
-
+        stopShowNotification();
+        MyInitialMediaSongPlayer.isStarted = false;
+        MyInitialMediaSongPlayer.isPlaying = false;
         super.onDestroy();
     }
 
@@ -367,24 +362,26 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
                 if (MyInitialMediaSongPlayer.isStarted){
                     Log.d(TAG+" updateUiFromService", "Start Update");
-                   if (commandArrive) {
-                       Log.d(TAG+" updateUiFromService", "Start Update"+" CommandArrive");
+                    if (currentSong != null) {
+                        if (commandArrive) {
+                            Log.d(TAG + " updateUiFromService", "Start Update" + " CommandArrive");
 
-                       updateShuffleBtnUi(buttonMainObject.getShuffleBtn());
-                       updateTextViewMainObject(textViewMainObject);
-                       updateLoopBtnUi(buttonMainObject.getLoopBtn());
-                       updateMiniSongNameUi(miniObject.getMini_songName());
-                       updateSeekbarUi(seekBar, buttonMainObject.getPlayBtn());
+                            updateShuffleBtnUi(buttonMainObject.getShuffleBtn());
+                            updateTextViewMainObject(textViewMainObject);
+                            updateLoopBtnUi(buttonMainObject.getLoopBtn());
+                            updateMiniSongNameUi(miniObject.getMini_songName());
+                            updateSeekbarUi(seekBar, buttonMainObject.getPlayBtn());
 
-                       commandArrive = false;
+                            commandArrive = false;
 
-                   }
+                        }
 /*************************************************************************  Infinity Loop  ************************************************************************/
 
-                    updatePlayBtnUi(buttonMainObject.getPlayBtn());
-                    updateMiniPlayBtnUi(miniObject.getMini_playBtn());
-                    updateTextViewCurrentTime(textViewMainObject.getCurrentTimeTv());
-                    updateSeekbarUiCurrentPosition(seekBar);
+                        updatePlayBtnUi(buttonMainObject.getPlayBtn());
+                        updateMiniPlayBtnUi(miniObject.getMini_playBtn());
+                        updateTextViewCurrentTime(textViewMainObject.getCurrentTimeTv());
+                        updateSeekbarUiCurrentPosition(seekBar);
+                    }
                }
 
                 Log.d(TAG+" updateUiFromService", " is Running...");
@@ -401,7 +398,9 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     public void stopUpdateUi(){
         handler.removeCallbacks(updateUiRunnable);
     }
-
+    private void stopMyProcess(){
+        Process.killProcess(Process.myPid());
+    }
 
     private void playMusic() {
 
@@ -414,6 +413,8 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
             MyInitialMediaSongPlayer.isStarted = true;
             MyInitialMediaSongPlayer.isPlaying = true;
+
+            updateNotificationView();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -549,7 +550,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
     }
     private void repeatSectionRunning(){
-        myThread = new Thread(new Runnable() {
+        repeatSectionThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 while (isRepeatSection){
@@ -583,13 +584,15 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                 }
             }
         });
-        myThread.start();
+        repeatSectionThread.setName("repeatSectionThread");
+        repeatSectionThread.start();
+        updateNotificationView();
     }
 
     public void showNotification(int intPlayIcon, int intLoopIcon) {
         if (isShowNotification && currentSong != null) {
             Log.d(TAG, " showNotification");
-            myNotificationThread = new Thread(new Runnable() {
+            myNotificationThread = new Thread(notificationRunnable = new Runnable() {
                 @Override
                 public void run() {
                     Log.i(TAG + " showNotification", " Current Thread " + Thread.currentThread().getName());
@@ -615,7 +618,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                     Intent loopIntent = new Intent(NotificationService.this, NotificationReceiver.class).setAction(ACTION_REPEAT);
                     PendingIntent loopPending = PendingIntent.getBroadcast(NotificationService.this, REQUEST_CODE, loopIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-                    Intent stopIntent = new Intent(NotificationService.this, NotificationReceiver.class).setAction(ACTION_REPEAT);
+                    Intent stopIntent = new Intent(NotificationService.this, NotificationReceiver.class).setAction(ACTION_STOP);
                     PendingIntent stopPending = PendingIntent.getBroadcast(NotificationService.this, REQUEST_CODE, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
                     NotificationCompat.Builder builder = new NotificationCompat.Builder(NotificationService.this, CHANNEL_ID_1);
@@ -634,7 +637,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
 
                     Notification notification = builder.build();
-                    NotificationManagerCompat notificationManagerCompat = NotificationManagerCompat.from(NotificationService.this);
+                    notificationManagerCompat = NotificationManagerCompat.from(NotificationService.this);
                     if (ActivityCompat.checkSelfPermission(NotificationService.this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                         // TODO: Consider calling
                         //    ActivityCompat#requestPermissions
@@ -648,8 +651,15 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                     notificationManagerCompat.notify(798, notification);
                 }
             });
+            myNotificationThread.setName("myNotificationThread");
             myNotificationThread.start();
-
+            showNotificationStarted = true;
+        }
+    }
+    private void stopShowNotification(){
+        if (showNotificationStarted) {
+            notificationManagerCompat.deleteNotificationChannel(CHANNEL_ID_1);
+            showNotificationStarted = false;
         }
     }
 
@@ -686,7 +696,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     /*************************************************************************  Update Ui Tag  ************************************************************************/
     private void updatePlayBtnUi(ImageButton playBtn){
 //          PlayBtn UI
-            if (mediaPlayer.isPlaying()) {
+            if (MyInitialMediaSongPlayer.isPlaying) {
                 playBtn.setBackgroundResource(R.drawable.baseline_pause_circle_outline_24);
             } else {
                 playBtn.setBackgroundResource(R.drawable.baseline_play_circle_outline_24);
@@ -733,7 +743,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     }
     private void updateMiniPlayBtnUi(ImageView miniPlayBtn){
 
-        if (mediaPlayer.isPlaying()) {
+        if (MyInitialMediaSongPlayer.isPlaying) {
             miniPlayBtn.setBackgroundResource(R.drawable.baseline_pause_24);
         } else {
             miniPlayBtn.setBackgroundResource(R.drawable.baseline_play_arrow_24);
@@ -742,32 +752,34 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     private void updateSeekbarUi(SeekBar seekBar, ImageButton playBtn){
 
 //                               SeekBar UI
-        seekBar.setMax(mediaPlayer.getDuration());
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-                if (b) {
-                    try {
+        if (currentSong != null && mediaPlayer != null) {
+            seekBar.setMax(Integer.parseInt(currentSong.getDuration()));
+            seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+                    if (b) {
+                        try {
 
-                        playBtn.setBackgroundResource(R.drawable.baseline_play_circle_outline_24);
-                        mediaPlayer.seekTo(i);
-                        mediaPlayer.start();
-                    } catch (Exception e) {
-                        e.printStackTrace();
+                            playBtn.setBackgroundResource(R.drawable.baseline_play_circle_outline_24);
+                            mediaPlayer.seekTo(i);
+                            mediaPlayer.start();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
-            }
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
 
-            }
+                }
 
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
 
-            }
-        });
+                }
+            });
+        }
     }
     private void updateSeekbarUiCurrentPosition(SeekBar seekBar){
 
@@ -820,7 +832,5 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                 break;
         }
     }
-    private void stopServiceAction(){
-        stopSelf();
-    }
+
 }

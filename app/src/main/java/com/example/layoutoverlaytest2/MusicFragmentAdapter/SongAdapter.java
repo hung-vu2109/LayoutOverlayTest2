@@ -50,7 +50,6 @@ public class SongAdapter extends RecyclerView.Adapter<SongViewHolder> {
         holder.itemView.setOnClickListener(view -> {
             Toast.makeText(context, "item "+songData.getTitle()+" is Clicked", Toast.LENGTH_SHORT).show();
 
-            MyInitialMediaSongPlayer.getInstance().reset();
             MyInitialMediaSongPlayer.starterIndex = position;
 
             Log.d("SongAdapter", String.valueOf(MyInitialMediaSongPlayer.starterIndex));
