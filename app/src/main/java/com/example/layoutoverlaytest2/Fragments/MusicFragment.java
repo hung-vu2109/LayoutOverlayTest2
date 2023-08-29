@@ -1,11 +1,11 @@
 package com.example.layoutoverlaytest2.Fragments;
 
+
+
+import static com.example.layoutoverlaytest2.Services.NotificationService.songModelArrayList;
+
 import android.content.Context;
-import android.database.Cursor;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,28 +17,23 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.layoutoverlaytest2.MusicFragmentAdapter.SongAdapter;
+import com.example.layoutoverlaytest2.Adapters.MusicFragmentAdapter.SongAdapter;
 import com.example.layoutoverlaytest2.Interfaces.DataPassingInterface;
-import com.example.layoutoverlaytest2.Models.SongModel;
+import com.example.layoutoverlaytest2.Models.Song.SongModel;
 import com.example.layoutoverlaytest2.R;
 
-import java.io.File;
 import java.util.ArrayList;
 
 
-public class MusicFragment extends Fragment {
+public class MusicFragment extends Fragment{
 
     View view;
-    ArrayList<SongModel> songModelArrayList = new ArrayList<>();
-
+    SongAdapter songAdapter;
     RecyclerView fragmentMusicRecyclerView;
     TextView noSong_tv;
     DataPassingInterface dataPassingInterface;
+//    ArrayList<SongModel> songModelArrayList;
     static final String TAG = "Music Fragment ";
-
-    public MusicFragment() {
-        // Required empty public constructor
-    }
 
 
     @Override
@@ -54,60 +49,17 @@ public class MusicFragment extends Fragment {
         Log.d(TAG, "onCreateView");
         // Inflate the layout for this fragment
         view = inflater.inflate(R.layout.fragment_music, container, false);
-
-
         fragmentMusicRecyclerView = view.findViewById(R.id.fragment_music_recyclerView);
-
-        noSong_tv = requireActivity().findViewById(R.id.fragment_music_tv_noSong);
-
-
-//      Access media files from shared storage
-        Uri collectionUri;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
-            collectionUri = MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
-        } else {
-            collectionUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-        }
-        String[] projection = new String[]{
-                MediaStore.Audio.Media.DATA,
-                MediaStore.Audio.Media.TITLE,
-                MediaStore.Audio.Media.DURATION
-        };
-        String selection = MediaStore.Audio.Media.IS_MUSIC + "!=0";
-        String sortOrder = MediaStore.Audio.Media.TITLE + " ASC";
-
-        try (Cursor cursor = requireContext().getContentResolver().query(collectionUri, projection, selection, null, sortOrder)){
-
-//            int thumbnailColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID);
-//            int _thumbnailId = cursor.getInt(thumbnailColumn);
-//            Uri thumbnailUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, _thumbnailId);
-//            Bitmap bitmap = getContext().getContentResolver().loadThumbnail(thumbnailUri, new Size(64, 64), null);
-
-            int titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE);
-            int durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION);
-            int  pathColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);
-
-
-            while (cursor.moveToNext()){
-                String nameSong = cursor.getString(titleColumn);
-                String duration = cursor.getString(durationColumn);
-                String path = cursor.getString(pathColumn);
-
-                SongModel songData = new SongModel(path, nameSong, duration);
-                if (new File(songData.getPath()).exists()){
-                    songModelArrayList.add(songData);
-                }
-
-                if (songModelArrayList.size() == 0){
-                    noSong_tv.setVisibility(View.VISIBLE);
-                }else {
-                    recyclerViewSetAdapter();
-                }
-            }
-        }
+        noSong_tv = view.findViewById(R.id.fragment_music_tv_noSong);
 
 //        passData(songModelArrayList);
-
+        if (songModelArrayList != null) {
+            if (songModelArrayList.isEmpty()) {
+                noSong_tv.setVisibility(View.VISIBLE);
+            } else {
+                recyclerViewSetAdapter();
+            }
+        }
         return view;
     }
 
@@ -124,11 +76,12 @@ public class MusicFragment extends Fragment {
 
     public void recyclerViewSetAdapter(){
         fragmentMusicRecyclerView.setLayoutManager(new LinearLayoutManager((getContext())));
-        fragmentMusicRecyclerView.setAdapter(new SongAdapter(getContext(), songModelArrayList));
+        fragmentMusicRecyclerView.setAdapter(songAdapter = new SongAdapter(getContext(), songModelArrayList));
         fragmentMusicRecyclerView.setHasFixedSize(true);
     }
     public void resetAdapter(){
-        fragmentMusicRecyclerView.setAdapter(null);
+        fragmentMusicRecyclerView.removeAllViews();
+        fragmentMusicRecyclerView.setAdapter(songAdapter);
     }
     public void passData(ArrayList<SongModel> songModelArrayList){
         dataPassingInterface.onSetDataPassing(songModelArrayList);

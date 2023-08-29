@@ -5,6 +5,11 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.os.Build;
 
+import com.example.layoutoverlaytest2.Models.Song.SongModel;
+import com.example.layoutoverlaytest2.Models.Video.VideoModel;
+
+import java.util.ArrayList;
+
 public class ApplicationClass extends Application {
 
     public static final String CHANNEL_ID_1="CHANNEL_1";
@@ -21,6 +26,7 @@ public class ApplicationClass extends Application {
     public static final String ACTION_MINI_PLAY = "ACTION_MINI_PLAY";
     public static final String ACTION_STOP = "ACTION_STOP";
 
+    public static volatile boolean isQueryDone = false;
 
     @Override
     public void onCreate() {

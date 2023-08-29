@@ -22,7 +22,7 @@
         android:theme="@style/Theme.LayoutOverlayTest2"
         tools:targetApi="31">
         <activity
-            android:name=".MainActivity"
+            android:name=".Activities.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -30,8 +30,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <service android:name=".Services.NotificationService" />
-<!--        <service android:name=".Services.MyMediaPlayerService" />-->
+        <service android:name=".Services.NotificationService"/>
         <receiver android:name=".BroadcastReceiver.NotificationReceiver"
             android:exported="false">
             <intent-filter>

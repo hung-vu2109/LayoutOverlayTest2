@@ -8,14 +8,23 @@
         android:background="@drawable/img_background"
         app:motionDebug="NO_DEBUG"
         app:layoutDescription="@xml/scene_24"
-        tools:context=".MainActivity">
+        tools:context=".Activities.MainActivity">
 
         <FrameLayout
             android:id="@+id/fragmentToReplace_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/lightPink"/>
+            android:background="@drawable/img_background">
 
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:padding="12dp"
+                android:text=" Fragment to Replace"
+                android:textColor="@color/white"
+                android:textSize="18sp"
+                android:textAlignment="center"/>
+        </FrameLayout>
 
         <View
             android:id="@+id/top_image_container"
@@ -26,17 +35,28 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <ImageView
+        <RelativeLayout
             android:id="@+id/top_image"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:contentDescription="big thumbnail"
             android:scaleType="fitCenter"
             app:layout_constraintBottom_toBottomOf="@id/top_image_container"
             app:layout_constraintEnd_toEndOf="@id/top_image_container"
             app:layout_constraintStart_toStartOf="@id/top_image_container"
             app:layout_constraintTop_toTopOf="@id/top_image_container"
-            app:srcCompat="@drawable/girl_with_cat" />
+            app:srcCompat="@drawable/girl_with_cat">
+            <ImageView
+                android:id="@+id/thumbnail_mainImage"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter"
+                app:srcCompat="@drawable/girl_with_cat"/>
+            <TextureView
+                android:id="@+id/textureView_main"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+
+        </RelativeLayout>
 
         <LinearLayout
             android:id="@+id/minimalTextViewContainer"
@@ -171,11 +191,11 @@
 
                 <ImageButton
                     android:id="@+id/btn_player_pauseSong"
-                    android:contentDescription="Play Button"
                     android:layout_width="70dp"
                     android:layout_height="70dp"
                     android:layout_centerInParent="true"
-                    android:background="@drawable/baseline_pause_circle_outline_24" />
+                    android:background="@drawable/baseline_play_circle_outline_24"
+                    android:contentDescription="Play Button" />
 
                 <ImageButton
                     android:id="@+id/btn_player_nextSong"
@@ -188,12 +208,12 @@
 
                 <ImageButton
                     android:id="@+id/btn_player_loop"
-                    android:contentDescription="Loop Button"
                     android:layout_width="50dp"
                     android:layout_height="50dp"
                     android:layout_centerInParent="true"
                     android:layout_toLeftOf="@id/btn_player_prevSong"
-                    android:background="@drawable/baseline_repeat_24"/>
+                    android:background="@drawable/baseline_repeat_24"
+                    android:contentDescription="Loop Button" />
 
                 <ImageButton
                     android:id="@+id/btn_player_shuffle"
@@ -212,7 +232,7 @@
             android:id="@+id/bottom_nav"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:background="@color/white"
+            android:background="@color/black"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintTop_toBottomOf="parent"

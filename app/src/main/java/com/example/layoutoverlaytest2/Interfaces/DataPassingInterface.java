@@ -1,6 +1,6 @@
 package com.example.layoutoverlaytest2.Interfaces;
 
-import com.example.layoutoverlaytest2.Models.SongModel;
+import com.example.layoutoverlaytest2.Models.Song.SongModel;
 
 import java.util.ArrayList;
 

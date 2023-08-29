@@ -230,7 +230,7 @@
         <Constraint
             android:id="@+id/minimalTextViewContainer"
             motion:layout_constraintStart_toEndOf="@id/top_image"
-            android:layout_width="150dp"
+            android:layout_width="0dp"
             android:layout_height="45dp"
             motion:layout_constraintBottom_toBottomOf="@id/top_image_container"
             motion:layout_constraintTop_toTopOf="@id/top_image_container"

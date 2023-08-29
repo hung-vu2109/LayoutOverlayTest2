@@ -1,65 +1,126 @@
 package com.example.layoutoverlaytest2.Fragments;
 
+
+import static com.example.layoutoverlaytest2.Services.NotificationService.videoModelArrayList;
+
+import android.annotation.SuppressLint;
+import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.util.Log;
+import android.util.LruCache;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.layoutoverlaytest2.Adapters.VideoFragmentAdapter.VideoAdapter;
+import com.example.layoutoverlaytest2.Models.Video.VideoModel;
 import com.example.layoutoverlaytest2.R;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link VideoFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
 public class VideoFragment extends Fragment {
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
+    private static final String TAG = "Video Fragment ";
+    private RecyclerView fragmentVideoRecyclerView;
+    TextView noVideoTv;
+    View view;
+    enum MyLayoutManager{
+        GRID_LAYOUT_MANAGER,
+        LINEAR_LAYOUT_MANAGER
+    }
+    MyLayoutManager myLayoutManager = MyLayoutManager.GRID_LAYOUT_MANAGER;
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+
 
     public VideoFragment() {
-        // Required empty public constructor
-    }
-
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment VideoFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static VideoFragment newInstance(String param1, String param2) {
-        VideoFragment fragment = new VideoFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
     }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, "onCreate");
         super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
+        setHasOptionsMenu(true);
+
+
+
+    }
+
+    @Override
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+        Log.d(TAG, "onCreateOptionMenu");
+        inflater.inflate(R.menu.fragment_video_menu, menu);
+        super.onCreateOptionsMenu(menu, inflater);
+    }
+
+    @SuppressLint("NonConstantResourceId")
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        switch (item.getItemId()){
+            case R.id.gridView:
+                myLayoutManager = MyLayoutManager.GRID_LAYOUT_MANAGER;
+                break;
+            case R.id.linearView:
+                myLayoutManager = MyLayoutManager.LINEAR_LAYOUT_MANAGER;
+                break;
         }
+        if (fragmentVideoRecyclerView != null) {
+            fragmentVideoRecyclerView.removeAllViews();
+            setAdapterToRecyclerView();
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onOptionsMenuClosed(@NonNull Menu menu) {
+        super.onOptionsMenuClosed(menu);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_video, container, false);
+
+        Log.d(TAG, "onCreateView");
+        view = inflater.inflate(R.layout.fragment_video, container, false);
+        fragmentVideoRecyclerView = view.findViewById(R.id.fragment_video_recyclerView);
+        noVideoTv = view.findViewById(R.id.fragment_video_tv_noVideo);
+
+        printVideoModelArrayList();
+        setAdapterToRecyclerView();
+
+
+        // return view that be Inflated layout for this fragment
+        return view;
     }
+
+
+    private void printVideoModelArrayList(){
+        if (videoModelArrayList.size() > 0){
+            Log.d(TAG+"size of video array", videoModelArrayList.size()+"");
+            for ( VideoModel i : videoModelArrayList){
+                Log.d(TAG+"print video array", i+"");
+            }
+        } else {
+            noVideoTv.setVisibility(View.VISIBLE);
+        }
+    }
+    private void setAdapterToRecyclerView(){
+        Log.d(TAG, "setAdapterMethod");
+        if (myLayoutManager == MyLayoutManager.LINEAR_LAYOUT_MANAGER) {
+            fragmentVideoRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+            fragmentVideoRecyclerView.setAdapter(new VideoAdapter(getContext(), videoModelArrayList, false));
+        } else {
+            fragmentVideoRecyclerView.setLayoutManager(new GridLayoutManager(getContext(), 2));
+            fragmentVideoRecyclerView.setAdapter(new VideoAdapter(getContext(), videoModelArrayList, true));
+        }
+        fragmentVideoRecyclerView.setHasFixedSize(true);
+    }
+
 }

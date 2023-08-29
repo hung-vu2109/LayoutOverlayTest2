@@ -13,6 +13,7 @@ import static com.example.layoutoverlaytest2.ApplicationClass.CHANNEL_ID_1;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_SONG_LIST;
 import static com.example.layoutoverlaytest2.ApplicationClass.REMOVE_SONG;
+import static com.example.layoutoverlaytest2.ApplicationClass.isQueryDone;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -22,19 +23,14 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.MediaPlayer;
 import android.media.session.MediaSession;
-import android.net.Uri;
 import android.os.Binder;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.Process;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -48,34 +44,45 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.core.app.TaskStackBuilder;
 
 import com.example.layoutoverlaytest2.BroadcastReceiver.NotificationReceiver;
-import com.example.layoutoverlaytest2.MainActivity;
-import com.example.layoutoverlaytest2.Models.ButtonMainObject;
-import com.example.layoutoverlaytest2.Models.MiniObject;
-import com.example.layoutoverlaytest2.Models.SongModel;
-import com.example.layoutoverlaytest2.Models.TextViewMainObject;
-import com.example.layoutoverlaytest2.Utils.MyInitialMediaSongPlayer;
+import com.example.layoutoverlaytest2.Activities.MainActivity;
+import com.example.layoutoverlaytest2.Dialogs.QueryFileWaitingDialog;
+import com.example.layoutoverlaytest2.Models.Song.ButtonMainObject;
+import com.example.layoutoverlaytest2.Models.Song.MiniObject;
+import com.example.layoutoverlaytest2.Models.Song.SongModel;
+import com.example.layoutoverlaytest2.Models.Song.TextViewMainObject;
+import com.example.layoutoverlaytest2.Models.Video.VideoModel;
+import com.example.layoutoverlaytest2.Callable.QueryMusicFilesCallable;
+import com.example.layoutoverlaytest2.Callable.QueryVideoFilesCallable;
+import com.example.layoutoverlaytest2.Utils.MyInitialMediaPlayer;
 import com.example.layoutoverlaytest2.R;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
-public class NotificationService extends Service implements MediaPlayer.OnErrorListener {
+public class NotificationService extends Service implements MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener{
 
     static final String TAG = "NotificationService ";
     static final String BUNDLE_NAME = "MY_BUNDLE";
     static final String DATA_KEY = "SONG_BUNDLE";
     private static final int REQUEST_CODE = 592431;
-    public MediaPlayer mediaPlayer = MyInitialMediaSongPlayer.getInstance();
-    ArrayList<SongModel> songModelArrayList = new ArrayList<>();
+    public MediaPlayer mediaPlayer = MyInitialMediaPlayer.getInstance();
     private final IBinder mBinder = new MyBinder();
     public Handler handler = new Handler();
+    public static volatile ArrayList<VideoModel> videoModelArrayList = new ArrayList<>();
+    public static volatile ArrayList<SongModel> songModelArrayList = new ArrayList<>();
+    QueryMusicFilesCallable queryMusicFilesCallable = new QueryMusicFilesCallable(this, songModelArrayList);
+    QueryVideoFilesCallable queryVideoFilesCallable = new QueryVideoFilesCallable(this, videoModelArrayList);
     Thread repeatSectionThread;
     Thread myNotificationThread;
     SongModel currentSong;
+    VideoModel currentVideo;
     boolean isShuffleSongs = false;
     int pressedTimes = 0;
     boolean loopAllSongs = false, loopOneSong = false;
@@ -85,6 +92,8 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     boolean isShowNotification = true;
     boolean showNotificationStarted = false;
     boolean commandArrive = false;
+    boolean setInitialItemNav = false;
+
 
     Runnable updateUiRunnable, notificationRunnable;
     MediaSession mediaSession;
@@ -97,9 +106,9 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         Log.d(TAG, " onCreate");
 
 //        check song list from adapter
-        if (songModelArrayList == null || songModelArrayList.size() == 0) {
+        if (songModelArrayList.isEmpty() || videoModelArrayList.isEmpty()) {
             Log.d(TAG, "songModelArrayList: NULL");
-            queryMusicFiles();
+            queryMusicAndVideo();
         } else {
 //            for (SongModel i : songModelArrayList) {
 //                Log.d(TAG, String.valueOf(i));
@@ -108,6 +117,66 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         initialMusicPlayer();
     }
 
+
+    public synchronized void queryMusicAndVideo(){
+        FutureTask<ArrayList<VideoModel>> arrayListFutureTask1 = new FutureTask<ArrayList<VideoModel>>(queryVideoFilesCallable){
+            @Override
+            protected void set(ArrayList<VideoModel> videoModelArrayList1) {
+                super.set(videoModelArrayList);
+                videoModelArrayList = videoModelArrayList1;
+            }
+
+            @Override
+            protected void setException(Throwable t) {
+                super.setException(t);
+            }
+        };
+        FutureTask<ArrayList<SongModel>> arrayListFutureTask2 = new FutureTask<ArrayList<SongModel>>(queryMusicFilesCallable){
+            @Override
+            protected void set(ArrayList<SongModel> songModelArrayList1) {
+                super.set(songModelArrayList);
+                songModelArrayList = songModelArrayList1;
+            }
+
+            @Override
+            protected void setException(Throwable t) {
+                super.setException(t);
+            }
+        };
+
+        ExecutorService executorService = Executors.newFixedThreadPool(2);
+
+        executorService.execute(arrayListFutureTask1);
+        executorService.execute(arrayListFutureTask2);
+
+        while (!isQueryDone){
+//            try {
+                if (arrayListFutureTask1.isDone() && arrayListFutureTask2.isDone()) {
+                    Log.d(TAG + " Query Task", " All is done");
+                    executorService.shutdown();
+
+                    if (!videoModelArrayList.isEmpty()) {
+                        for (VideoModel i : videoModelArrayList) {
+                            Log.d(TAG + " Query Task Result: ", "Object " + i);
+                        }
+                    }
+                    if (!songModelArrayList.isEmpty()) {
+                        for (SongModel i : songModelArrayList) {
+                            Log.d(TAG + " Query Task Result: ", "Object " + i);
+                        }
+                    }
+
+                    isQueryDone = true;
+                } else {
+                    Log.d(TAG + " Query Task", " is Running");
+//                    arrayListFutureTask1.get();
+//                    arrayListFutureTask2.get();
+                }
+//            } catch (ExecutionException | InterruptedException e) {
+//                throw new RuntimeException(e);
+//            }
+        }
+    }
 
 
     @Override
@@ -248,21 +317,28 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     public void onDestroy() {
         Log.d(TAG, "onDestroy");
         stopUpdateUi();
-        if (currentSong != null) {
+        if (currentSong != null || currentVideo != null) {
             mediaPlayer.stop();
             mediaPlayer.release();
         }
         stopShowNotification();
-        MyInitialMediaSongPlayer.isStarted = false;
-        MyInitialMediaSongPlayer.isPlaying = false;
+        MyInitialMediaPlayer.isStarted = false;
+        MyInitialMediaPlayer.isPlaying = false;
         super.onDestroy();
     }
 
     @Override
     public boolean onError(MediaPlayer mediaPlayer, int i, int i1) {
-        Log.d(TAG + " MediaPlayer", "onError");
+        Log.d(TAG + " MediaPlayer", "onError" +"..."+i+"..."+i1);
         mediaPlayer.reset();
         return false;
+    }
+
+    @Override
+    public void onCompletion(MediaPlayer mp) {
+        Log.d(TAG + " MediaPlayer", "onCompletion");
+        MyInitialMediaPlayer.isPlaying = false;
+        updateNotificationView();
     }
 
     public class MyBinder extends Binder {
@@ -271,81 +347,34 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         }
     }
 
-
-    private void queryMusicFiles() {
-
-        Log.d(TAG + "queryMusicFiles method", " started");
-//      Query media files from shared storage
-        Uri collectionUri;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            collectionUri = MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL);
-        } else {
-            collectionUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-        }
-        String[] projection = new String[]{
-                MediaStore.Audio.Media.DATA,
-                MediaStore.Audio.Media.TITLE,
-                MediaStore.Audio.Media.DURATION
-        };
-        String selection = MediaStore.Audio.Media.IS_MUSIC + "!=0";
-        String sortOrder = MediaStore.Audio.Media.TITLE + " ASC";
-
-        Log.d(TAG + "query files", "starting...");
-        try (Cursor cursor = this.getContentResolver().query(collectionUri, projection, selection, null, sortOrder)) {
-
-//            int thumbnailColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID);
-//            int _thumbnailId = cursor.getInt(thumbnailColumn);
-//            Uri thumbnailUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, _thumbnailId);
-//            Bitmap bitmap = getContext().getContentResolver().loadThumbnail(thumbnailUri, new Size(64, 64), null);
-
-            int titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE);
-            int durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION);
-            int pathColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);
-
-
-            while (cursor.moveToNext()) {
-                String nameSong = cursor.getString(titleColumn);
-                String duration = cursor.getString(durationColumn);
-                String path = cursor.getString(pathColumn);
-
-                SongModel songData = new SongModel(path, nameSong, duration);
-                if (new File(songData.getPath()).exists()) {
-                    songModelArrayList.add(songData);
-                }
-            }
-
-        } finally {
-
-        }
-
-        Log.d(TAG + "query files", "finished !!");
-    }
-
     public void initialMusicPlayer() {
 
         Log.d(TAG, "initialMusicPlayer");
 //        mediaPlayer.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
 //        mediaPlayer.setOnPreparedListener(this);
-//        mediaPlayer.prepareAsync();
+//        mediaPlayer.prepare();
         mediaPlayer.setOnErrorListener(this);
-//        mediaPlayer.setOnCompletionListener(this);
+        mediaPlayer.setOnCompletionListener(this);
 
     }
 
     public void setInitialDataSource() {
         Log.d(TAG, "setInitialDatasource");
-        Log.d(TAG + "Song Position", String.valueOf(MyInitialMediaSongPlayer.starterIndex));
-        currentSong = songModelArrayList.get(MyInitialMediaSongPlayer.starterIndex);
-
+        Log.d(TAG + "Song Position", String.valueOf(MyInitialMediaPlayer.starterIndex));
+        if (MyInitialMediaPlayer.isMusic){
+            currentSong = songModelArrayList.get(MyInitialMediaPlayer.starterIndex);
+        } else {
+            currentVideo = videoModelArrayList.get(MyInitialMediaPlayer.starterIndex);
+        }
 
         playMusic();
     }
 
     public void removeSongInPlaylist() {
-        Log.d(TAG, "Remove the song " + MyInitialMediaSongPlayer.removeIndex);
+        Log.d(TAG, "Remove the song " + MyInitialMediaPlayer.removeIndex);
         Log.d(TAG, "Total songs before " + songModelArrayList.size());
-        if (MyInitialMediaSongPlayer.removeIndex >= 0) {
-            songModelArrayList.remove(MyInitialMediaSongPlayer.removeIndex);
+        if (MyInitialMediaPlayer.removeIndex >= 0) {
+            songModelArrayList.remove(MyInitialMediaPlayer.removeIndex);
         }
         Log.d(TAG, "Total songs after " + songModelArrayList.size());
     }
@@ -354,15 +383,17 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                                     ButtonMainObject buttonMainObject,
                                     TextViewMainObject textViewMainObject,
                                     SeekBar seekBar,
-                                    MiniObject miniObject) {
+                                    MiniObject miniObject,
+                                    QueryFileWaitingDialog queryFileWaitingDialog,
+                                    BottomNavigationView bottomNavigationView) {
 
         activity.runOnUiThread( updateUiRunnable = new Runnable() {
             @Override
             public void run() {
 
-                if (MyInitialMediaSongPlayer.isStarted){
+                if (MyInitialMediaPlayer.isStarted){
                     Log.d(TAG+" updateUiFromService", "Start Update");
-                    if (currentSong != null) {
+                    if (currentSong != null || currentVideo != null) {
                         if (commandArrive) {
                             Log.d(TAG + " updateUiFromService", "Start Update" + " CommandArrive");
 
@@ -373,8 +404,8 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                             updateSeekbarUi(seekBar, buttonMainObject.getPlayBtn());
 
                             commandArrive = false;
-
                         }
+
 /*************************************************************************  Infinity Loop  ************************************************************************/
 
                         updatePlayBtnUi(buttonMainObject.getPlayBtn());
@@ -382,15 +413,25 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                         updateTextViewCurrentTime(textViewMainObject.getCurrentTimeTv());
                         updateSeekbarUiCurrentPosition(seekBar);
                     }
-               }
 
-                Log.d(TAG+" updateUiFromService", " is Running...");
+                } else {
+
+                    if (!setInitialItemNav) {
+                        if (!isQueryDone) {
+                            queryFileWaitingDialog.show();
+                        } else {
+                            bottomNavigationView.setSelectedItemId(R.id.nav_fragment_container_music);
+                            queryFileWaitingDialog.dismiss();
+                            setInitialItemNav = true;
+                        }
+                    }
+                }
+                Log.d(TAG + " updateUiFromService", " is Running...");
                 try {
                     handler.postDelayed(updateUiRunnable, 200);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-
             }
         });
 
@@ -399,7 +440,8 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         handler.removeCallbacks(updateUiRunnable);
     }
     private void stopMyProcess(){
-        Process.killProcess(Process.myPid());
+//        Process.killProcess(Process.myPid());
+        System.exit(0);
     }
 
     private void playMusic() {
@@ -407,12 +449,17 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         Log.d(TAG, "playMusic method");
         try {
             mediaPlayer.reset();
-            mediaPlayer.setDataSource(currentSong.getPath());
+            if (MyInitialMediaPlayer.isMusic) {
+                mediaPlayer.setDataSource(currentSong.getPath());
+            } else {
+                mediaPlayer.setDataSource(currentVideo.getPathVideo());
+            }
             mediaPlayer.prepare();
             mediaPlayer.start();
 
-            MyInitialMediaSongPlayer.isStarted = true;
-            MyInitialMediaSongPlayer.isPlaying = true;
+            MyInitialMediaPlayer.isStarted = true;
+
+            MyInitialMediaPlayer.isPlaying = true;
 
             updateNotificationView();
         } catch (IOException e) {
@@ -426,24 +473,26 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
             Log.d(TAG, "starting generate Random song");
             generateRandomSong();
         } else {
-            if (MyInitialMediaSongPlayer.starterIndex == 0) {
-                MyInitialMediaSongPlayer.starterIndex = songModelArrayList.size();
+            if (MyInitialMediaPlayer.starterIndex == 0) {
+                MyInitialMediaPlayer.starterIndex = getMediaSizeArrayList();
             }
-            MyInitialMediaSongPlayer.starterIndex -= 1;
+            MyInitialMediaPlayer.starterIndex -= 1;
         }
     }
 
     private void playOrPauseSong() {
-        if (currentSong != null && MyInitialMediaSongPlayer.isStarted) {
+        if ((currentSong != null || currentVideo != null) && MyInitialMediaPlayer.isStarted) {
             if (mediaPlayer.isPlaying()) {
                 mediaPlayer.pause();
-                MyInitialMediaSongPlayer.isPlaying = false;
+                MyInitialMediaPlayer.isPlaying = false;
                 Log.d(TAG + "pauseOrPlayMethod", "Pausing");
+                updateNotificationView();
 
             } else {
                 mediaPlayer.start();
-                MyInitialMediaSongPlayer.isPlaying = true;
+                MyInitialMediaPlayer.isPlaying = true;
                 Log.d(TAG + "pauseOrPlayMethod", "Playing");
+                updateNotificationView();
             }
         } else {
             setInitialDataSource();
@@ -456,10 +505,10 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
             Log.d(TAG, "starting generate Random song");
             generateRandomSong();
         } else {
-            if (MyInitialMediaSongPlayer.starterIndex == songModelArrayList.size() - 1) {
-                MyInitialMediaSongPlayer.starterIndex = -1;
+            if (MyInitialMediaPlayer.starterIndex == getMediaSizeArrayList() - 1) {
+                MyInitialMediaPlayer.starterIndex = -1;
             }
-            MyInitialMediaSongPlayer.starterIndex += 1;
+            MyInitialMediaPlayer.starterIndex += 1;
         }
     }
 
@@ -483,10 +532,10 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
         // random position
         Random random = new Random();
-        int randPosition = random.nextInt(songModelArrayList.size());
+        int randPosition = random.nextInt(getMediaSizeArrayList());
         Log.d("Random Position ", "Random Position: " + randPosition);
 
-        MyInitialMediaSongPlayer.setStarterIndex(randPosition);
+        MyInitialMediaPlayer.setStarterIndex(randPosition);
 
     }
 
@@ -505,7 +554,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
             long startValue = -1, endValue = -1;
 
-            if (currentSong != null && hashMap.size() == 1) {
+            if ((currentSong != null || currentVideo != null) && hashMap.size() == 1) {
                 for (long i : hashMap.keySet()) {
                     Log.d("start value", i + "");
                     startValue = i;
@@ -513,7 +562,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                     Log.d("end value", hashMap.get(i) + "");
                 }
             } else {
-                Log.d("repeat Section", "currentSong = null || hashMap.size() != 1");
+                Log.d("repeat Section", "currentSong = null || currentVideo = null || hashMap.size() != 1");
                 isRepeatSection = false;
                 return;
             }
@@ -557,7 +606,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
                     Log.d(TAG+ "repeatSection", " is running");
                     if (isRepeatSection && pressedTimes == 1) {
-                        if (currentSong != null &&
+                        if ((currentSong != null || currentVideo != null) &&
                                 formatLongToMMSS(String.valueOf(mediaPlayer.getCurrentPosition())).equals(formatLongToMMSS(String.valueOf(intEndPoint)))) {
 
                             Log.d(TAG + "repeat Section State is", isRepeatSection + "");
@@ -590,13 +639,13 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     }
 
     public void showNotification(int intPlayIcon, int intLoopIcon) {
-        if (isShowNotification && currentSong != null) {
+        if (isShowNotification && (currentSong != null || currentVideo != null)) {
             Log.d(TAG, " showNotification");
             myNotificationThread = new Thread(notificationRunnable = new Runnable() {
                 @Override
                 public void run() {
                     Log.i(TAG + " showNotification", " Current Thread " + Thread.currentThread().getName());
-                    getSongName();
+                    getMediaName();
                     Intent mainActivityIntent = new Intent(NotificationService.this, MainActivity.class);
                     // Create the TaskStackBuilder and add the intent, which inflates the back stack
                     TaskStackBuilder taskStackBuilder = TaskStackBuilder.create(NotificationService.this);
@@ -623,12 +672,14 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
                     NotificationCompat.Builder builder = new NotificationCompat.Builder(NotificationService.this, CHANNEL_ID_1);
                     builder.setSmallIcon(R.drawable.baseline_music_note_24);
-                    builder.setContentTitle(getSongName());
+                    builder.setContentTitle(getMediaName());
                     builder.setStyle(new androidx.media.app.NotificationCompat.MediaStyle());
                     builder.setPriority(NotificationCompat.PRIORITY_MAX);
                     builder.setLargeIcon(bitmap);
                     builder.setContentIntent(mainPendingIntent);
                     builder.setOngoing(true);
+                    builder.setOnlyAlertOnce(true);
+                    builder.setAutoCancel(true);
                     builder.addAction(R.drawable.baseline_skip_previous_24, "Previous Song", prevPending);
                     builder.addAction(intPlayIcon, "Play Song", playPending);
                     builder.addAction(R.drawable.baseline_skip_next_24, "Next Song", nextPending);
@@ -668,7 +719,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         switch (pressedTimes) {
             case 0:
                 // no loop
-                if (MyInitialMediaSongPlayer.isPlaying){
+                if (MyInitialMediaPlayer.isPlaying){
                     showNotification(R.drawable.baseline_pause_24, R.drawable.baseline_repeat_24);
                 } else {
                     showNotification(R.drawable.baseline_play_arrow_24, R.drawable.baseline_repeat_24);
@@ -676,7 +727,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                 break;
             case 1:
                 // loop 1 songs
-                if (MyInitialMediaSongPlayer.isPlaying){
+                if (MyInitialMediaPlayer.isPlaying){
                     showNotification(R.drawable.baseline_pause_24, R.drawable.baseline_repeat_one_on_24);
                 } else {
                     showNotification(R.drawable.baseline_play_arrow_24, R.drawable.baseline_repeat_one_on_24);
@@ -684,7 +735,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                 break;
             case 2:
                 // loop all song
-                if (MyInitialMediaSongPlayer.isPlaying){
+                if (MyInitialMediaPlayer.isPlaying){
                     showNotification(R.drawable.baseline_pause_24, R.drawable.baseline_repeat_on_24);
                 } else {
                     showNotification(R.drawable.baseline_play_arrow_24, R.drawable.baseline_repeat_on_24);
@@ -696,7 +747,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     /*************************************************************************  Update Ui Tag  ************************************************************************/
     private void updatePlayBtnUi(ImageButton playBtn){
 //          PlayBtn UI
-            if (MyInitialMediaSongPlayer.isPlaying) {
+            if (MyInitialMediaPlayer.isPlaying) {
                 playBtn.setBackgroundResource(R.drawable.baseline_pause_circle_outline_24);
             } else {
                 playBtn.setBackgroundResource(R.drawable.baseline_play_circle_outline_24);
@@ -711,9 +762,9 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     }
     private void updateTextViewMainObject(TextViewMainObject textViewMainObject){
 //        Song Name Tv UI
-        textViewMainObject.getSongNameTv().setText(getSongName());
+        textViewMainObject.getSongNameTv().setText(getMediaName());
 //        End Time Tv UI
-        textViewMainObject.getEndTimeTv().setText(formatLongToMMSS(String.valueOf(currentSong.getDuration())));
+        textViewMainObject.getEndTimeTv().setText(formatLongToMMSS(getCurrentMediaDuration()));
     }
     private void updateTextViewCurrentTime(TextView currentTimeTv){
 
@@ -739,11 +790,11 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     }
     /** adding container to constrain Mini SongName TextView **/
     private void updateMiniSongNameUi(TextView miniSongName){
-        miniSongName.setText(getSongName());
+        miniSongName.setText(getMediaName());
     }
     private void updateMiniPlayBtnUi(ImageView miniPlayBtn){
 
-        if (MyInitialMediaSongPlayer.isPlaying) {
+        if (MyInitialMediaPlayer.isPlaying) {
             miniPlayBtn.setBackgroundResource(R.drawable.baseline_pause_24);
         } else {
             miniPlayBtn.setBackgroundResource(R.drawable.baseline_play_arrow_24);
@@ -752,8 +803,8 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     private void updateSeekbarUi(SeekBar seekBar, ImageButton playBtn){
 
 //                               SeekBar UI
-        if (currentSong != null && mediaPlayer != null) {
-            seekBar.setMax(Integer.parseInt(currentSong.getDuration()));
+        if (currentSong != null || currentVideo != null) {
+            seekBar.setMax(Integer.parseInt(getCurrentMediaDuration()));
             seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                 @Override
                 public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
@@ -763,6 +814,9 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                             playBtn.setBackgroundResource(R.drawable.baseline_play_circle_outline_24);
                             mediaPlayer.seekTo(i);
                             mediaPlayer.start();
+                            commandArrive = true;
+                            MyInitialMediaPlayer.isPlaying = true;
+                            updateNotificationView();
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
@@ -785,6 +839,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
         seekBar.setProgress(mediaPlayer.getCurrentPosition());
     }
+
     /*************************************************************************  Update Ui Tag  ************************************************************************/
     @SuppressLint("DefaultLocale")
     private String formatLongToMMSS(String duration){
@@ -794,13 +849,6 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         long sec = TimeUnit.MILLISECONDS.toSeconds(milliSec) % 60;
 
         return String.format("%02d:%02d", min, sec);
-    }
-    private String getSongName(){
-        String songName = "Song Name";
-        if (currentSong != null){
-            songName = currentSong.getTitle();
-        }
-        return songName;
     }
 
     public void setCommandArrive(){
@@ -814,6 +862,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                 // no loop
                 loopAllSongs = false;
                 loopOneSong = false;
+                loopSongOptions();
                 Log.d("LoopAllSongs", "No Loop");
                 break;
             case 1:
@@ -831,6 +880,36 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                 Log.d("LoopAllSongs", "loopAllSongs: ");
                 break;
         }
+    }
+
+    private String getMediaName(){
+        String mediaName = "Media Name";
+        if (MyInitialMediaPlayer.isMusic && currentSong != null){
+            mediaName = currentSong.getTitle();
+        }
+        if (!MyInitialMediaPlayer.isMusic && currentVideo != null){
+            mediaName = currentVideo.getTitleVideo();
+        }
+        return mediaName;
+    }
+    private int getMediaSizeArrayList(){
+        int size = 0;
+        if (MyInitialMediaPlayer.isMusic){
+            size = songModelArrayList.size();
+        } else {
+            size = videoModelArrayList.size();
+        }
+        return size;
+    }
+    private String getCurrentMediaDuration(){
+        String duration = "Media Duration";
+        if (currentSong != null && MyInitialMediaPlayer.isMusic){
+            duration = currentSong.getDuration();
+        }
+        if (currentVideo != null && !MyInitialMediaPlayer.isMusic){
+            duration = currentVideo.getDurationVideo();
+        }
+        return duration;
     }
 
 }

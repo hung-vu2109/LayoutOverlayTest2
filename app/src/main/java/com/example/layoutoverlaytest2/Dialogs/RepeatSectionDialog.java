@@ -1,4 +1,4 @@
-package com.example.layoutoverlaytest2;
+package com.example.layoutoverlaytest2.Dialogs;
 
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_REPEAT_SECTION;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
@@ -16,6 +16,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
+import com.example.layoutoverlaytest2.R;
 import com.example.layoutoverlaytest2.Services.NotificationService;
 
 import java.util.HashMap;

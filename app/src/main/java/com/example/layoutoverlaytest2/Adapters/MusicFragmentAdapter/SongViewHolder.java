@@ -1,4 +1,4 @@
-package com.example.layoutoverlaytest2.MusicFragmentAdapter;
+package com.example.layoutoverlaytest2.Adapters.MusicFragmentAdapter;
 
 import android.view.View;
 import android.widget.ImageView;

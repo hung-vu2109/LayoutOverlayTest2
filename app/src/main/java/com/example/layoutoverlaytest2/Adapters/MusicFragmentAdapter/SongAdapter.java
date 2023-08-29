@@ -1,4 +1,4 @@
-package com.example.layoutoverlaytest2.MusicFragmentAdapter;
+package com.example.layoutoverlaytest2.Adapters.MusicFragmentAdapter;
 
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_SONG_LIST;
@@ -18,15 +18,15 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.layoutoverlaytest2.Models.SongModel;
-import com.example.layoutoverlaytest2.Utils.MyInitialMediaSongPlayer;
+import com.example.layoutoverlaytest2.Models.Song.SongModel;
+import com.example.layoutoverlaytest2.Utils.MyInitialMediaPlayer;
 import com.example.layoutoverlaytest2.R;
 import com.example.layoutoverlaytest2.Services.NotificationService;
 
 import java.util.ArrayList;
 
 public class SongAdapter extends RecyclerView.Adapter<SongViewHolder> {
-
+    private static final String TAG = " Song Adapter ";
     Context context;
     ArrayList<SongModel> songModelArrayList;
 
@@ -38,21 +38,24 @@ public class SongAdapter extends RecyclerView.Adapter<SongViewHolder> {
     @NonNull
     @Override
     public SongViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        Log.d(TAG, "onCreateViewHolder");
         View view = LayoutInflater.from(context).inflate(R.layout.fragment_music_recycler_item, parent, false);
         return new SongViewHolder(view);
     }
 
     @Override
     public void onBindViewHolder(@NonNull SongViewHolder holder, @SuppressLint("RecyclerView") int position) {
+        Log.d(TAG, "onBindViewHolder");
         SongModel songData = songModelArrayList.get(position);
         holder.musicFragment_title_tv.setText(songData.getTitle());
 
         holder.itemView.setOnClickListener(view -> {
             Toast.makeText(context, "item "+songData.getTitle()+" is Clicked", Toast.LENGTH_SHORT).show();
 
-            MyInitialMediaSongPlayer.starterIndex = position;
+            MyInitialMediaPlayer.isMusic = true;
+            MyInitialMediaPlayer.starterIndex = position;
 
-            Log.d("SongAdapter", String.valueOf(MyInitialMediaSongPlayer.starterIndex));
+            Log.d("SongAdapter", String.valueOf(MyInitialMediaPlayer.starterIndex));
 
 
             Intent intent = new Intent(context, NotificationService.class);
@@ -85,7 +88,7 @@ public class SongAdapter extends RecyclerView.Adapter<SongViewHolder> {
                     notifyItemRangeChanged(position, songModelArrayList.size());
 
 //                    remove song in service
-                    MyInitialMediaSongPlayer.removeIndex = position;
+                    MyInitialMediaPlayer.removeIndex = position;
                     Intent intent = new Intent(context, NotificationService.class);
                     intent.putExtra(MY_COMMAND, REMOVE_SONG);
                     intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

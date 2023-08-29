@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="1dp"
+    android:background="@drawable/list_bg">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:padding="1dp">
+
+        <ImageView
+            android:id="@+id/fragment_video_img_item_icon"
+            android:layout_width="match_parent"
+            android:layout_height="99dp"
+            android:padding="1dp"
+            android:layout_centerVertical="true"
+            android:src="@drawable/baseline_smart_display_24"
+            android:scaleType="centerCrop"
+            android:background="@drawable/list_bg"/>
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true">
+
+            <TextView
+                android:id="@+id/fragment_video_tv_item_videoName"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:text="Video Name"
+                android:textAlignment="center"
+                android:textColor="@color/white"
+                android:textSize="12sp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"/>
+        </RelativeLayout>
+        <RelativeLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true">
+
+
+            <TextView
+                android:id="@+id/fragment_video_tv_item_durationVideo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingLeft="5dp"
+                android:layout_alignParentLeft="true"
+                android:text="duration video"
+                android:textSize="12sp"
+                android:textAlignment="center"
+                android:textColor="@color/white"/>
+            <TextView
+                android:id="@+id/fragment_video_tv_item_sizeVideo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingRight="5dp"
+                android:layout_alignParentRight="true"
+                android:text="size video"
+                android:textSize="12sp"
+                android:textAlignment="center"
+                android:textColor="@color/white"/>
+
+        </RelativeLayout>
+    </RelativeLayout>
+
+
+
+
+</RelativeLayout>

@@ -1,4 +1,4 @@
-package com.example.layoutoverlaytest2;
+package com.example.layoutoverlaytest2.Activities;
 
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_MINI_PLAY;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_NEXT;
@@ -6,16 +6,12 @@ import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PLAY;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PREV;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_REPEAT;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_SHUFFLE;
-import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_STOP;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.BroadcastReceiver;
 import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -27,6 +23,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.TextureView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
@@ -40,12 +37,17 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
+import com.example.layoutoverlaytest2.Dialogs.QueryFileWaitingDialog;
+import com.example.layoutoverlaytest2.Dialogs.RepeatSectionDialog;
 import com.example.layoutoverlaytest2.Fragments.MusicFragment;
 import com.example.layoutoverlaytest2.Fragments.VideoFragment;
-import com.example.layoutoverlaytest2.Models.ButtonMainObject;
-import com.example.layoutoverlaytest2.Models.MiniObject;
-import com.example.layoutoverlaytest2.Models.TextViewMainObject;
+import com.example.layoutoverlaytest2.Models.Song.ButtonMainObject;
+import com.example.layoutoverlaytest2.Models.Song.MiniObject;
+import com.example.layoutoverlaytest2.Models.Song.TextViewMainObject;
+import com.example.layoutoverlaytest2.R;
 import com.example.layoutoverlaytest2.Services.NotificationService;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
@@ -55,14 +57,19 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     private static final String TAG = "MainActivity.java ";
     private static final int REQUEST_CODE = 592431;
     static final String[] RUNTIME_PERMISSION = { Manifest.permission.READ_EXTERNAL_STORAGE };
-    MusicFragment musicFragment = new MusicFragment();
     TextView title_songName,currentTime,endTime;
     TextView mini_songName;
-    ImageView thumbnail_imageView;
     ImageView mini_playBtn, mini_closeBtn;
     ImageButton pauseBtn, nextBtn, prevBtn, loopBtn, shuffleBtn;
     SeekBar seekBar;
+    ImageView thumbnail_imageView;
+    TextureView textViewVideo;
     NotificationService notificationService;
+    FragmentManager fragmentManager = getSupportFragmentManager();
+    MusicFragment musicFragment = new MusicFragment();
+    VideoFragment videoFragment = new VideoFragment();
+    BottomNavigationView bottomNavigationView;
+    QueryFileWaitingDialog queryFileWaitingDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,16 +78,17 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         setContentView(R.layout.activity_main);
 
 
-        BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_nav);
+        bottomNavigationView = findViewById(R.id.bottom_nav);
         bottomNavigationView.setOnItemSelectedListener(this);
-        bottomNavigationView.setSelectedItemId(R.id.nav_fragment_container_music);
+//        bottomNavigationView.setSelectedItemId(R.id.nav_fragment_container_music);
 
 
         title_songName = findViewById(R.id.tv_player_songName);
         currentTime = findViewById(R.id.tv_player_currentTime);
         endTime = findViewById(R.id.tv_player_endTime);
 
-        thumbnail_imageView = findViewById(R.id.top_image);
+        thumbnail_imageView = findViewById(R.id.thumbnail_mainImage);
+        textViewVideo = findViewById(R.id.textureView_main);
 
 //        Button
         pauseBtn = findViewById(R.id.btn_player_pauseSong);
@@ -100,14 +108,19 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         mini_songName.setSelected(true);
 
-        if(!checkOverlayPer()){
-             requestOverlayPer();
-        }
+        queryFileWaitingDialog = new QueryFileWaitingDialog(this);
+
        if(!checkReadStoragePer()){
            requestReadStoragePer();
        }
+//       else if (videoModelArrayList.isEmpty()){
+//           Log.d(TAG + "query video arraylist", " starting");
+//           queryMusicAndVideo();
+//       }
+
 
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -127,7 +140,11 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         if (itemId == R.id.pipMode_Option){
             Log.d(TAG, "Pip mode Option");
+            if(!checkOverlayPer()){
+                requestOverlayPer();
+            } else {
 //            startPipModeService();
+            }
         }
 
         return super.onOptionsItemSelected(item);
@@ -172,7 +189,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Log.d(TAG, "ActivityCompat.requestPermissions");
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.MANAGE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE}, REQUEST_CODE);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.MANAGE_EXTERNAL_STORAGE}, REQUEST_CODE);
 //           or
 //            Intent intent = new Intent();
 //            intent.setAction(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
@@ -187,6 +204,8 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                         public void onActivityResult(Boolean result) {
 
                             if (result) {
+//                                bottomNavigationView.setSelectedItemId(R.id.nav_fragment_container_video);
+//                                bottomNavigationView.setSelectedItemId(R.id.nav_fragment_container_music);
                                 Toast.makeText(MainActivity.this, "Read permission Ok", Toast.LENGTH_SHORT).show();
                             } else {
 
@@ -202,14 +221,16 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (grantResults.length > 0 &&
-        grantResults[0] == PackageManager.PERMISSION_GRANTED){
-            Log.d(TAG+ " onRequestPermissionResult ", "Granted");
-            musicFragment.resetAdapter();
-            musicFragment.recyclerViewSetAdapter();
+        if (requestCode == REQUEST_CODE) {
+            if (grantResults.length > 0 &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG + " onRequestPermissionResult ", "Granted");
 
-        } else {
-            Log.d(TAG+ " onRequestPermissionResult", "Denied");
+
+            } else {
+                Log.d(TAG + " onRequestPermissionResult", "Denied");
+                finish();
+            }
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     }
@@ -220,17 +241,43 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         switch (item.getItemId()){
             case R.id.nav_fragment_container_music:
                 // music fragment
-                getSupportFragmentManager().beginTransaction().replace(R.id.fragmentToReplace_container, musicFragment).addToBackStack("MusicSteveOverlay").commit();
-//                Toast.makeText(this, "Music Tap", Toast.LENGTH_SHORT).show();
+                if (fragmentManager.getBackStackEntryCount()>1){
+                    fragmentManager.popBackStack();
+                }
+                setMusicFragment();
                 break;
             case R.id.nav_fragment_container_video:
                 // video fragment
-                VideoFragment videoFragment = new VideoFragment();
-                getSupportFragmentManager().beginTransaction().replace(R.id.fragmentToReplace_container, videoFragment).addToBackStack("VideoSteveOverlay").commit();
-//                Toast.makeText(this, "Video Tap", Toast.LENGTH_SHORT).show();
+                if (fragmentManager.getBackStackEntryCount()>1){
+                    fragmentManager.popBackStack();
+                }
+                setVideoFragment();
                 break;
         }
         return true;
+    }
+
+    private void setMusicFragment(){
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+        fragmentTransaction.setReorderingAllowed(true);
+        fragmentTransaction.replace(R.id.fragmentToReplace_container, musicFragment).addToBackStack("Steve").commit();
+//        Toast.makeText(this, "Music Tap", Toast.LENGTH_SHORT).show();
+    }
+    private void setVideoFragment(){
+        FragmentTransaction fragmentTransaction1 = fragmentManager.beginTransaction();
+        fragmentTransaction1.setReorderingAllowed(true);
+        fragmentTransaction1.replace(R.id.fragmentToReplace_container, videoFragment).addToBackStack("Steve").commit();
+//        Toast.makeText(this, "Video Tap", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        if (fragmentManager.getBackStackEntryCount() > 1){
+            fragmentManager.popBackStack();
+        } else {
+            finish();
+        }
     }
 
     @Override
@@ -289,7 +336,9 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                 new ButtonMainObject(loopBtn, prevBtn, pauseBtn, nextBtn, shuffleBtn),
                 new TextViewMainObject(title_songName, currentTime, endTime),
                 seekBar,
-                new MiniObject(mini_songName, mini_playBtn));
+                new MiniObject(mini_songName, mini_playBtn),
+                queryFileWaitingDialog,
+                bottomNavigationView);
 
         mini_songName.setSelected(true);
 
@@ -309,7 +358,6 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         Log.e(TAG+"Service Connection", "Disconnected");
         notificationService = null;
     }
-
 
 //    @Override
 //    public void onSetDataPassing(ArrayList<SongModel> songModelArrayList) {
@@ -379,5 +427,6 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         dialog.setCanceledOnTouchOutside(true);
         dialog.show();
     }
+
 
 }
