@@ -23,6 +23,7 @@ import java.util.HashMap;
 
 public class RepeatSectionDialog extends Dialog {
 
+    final String TAG = " RepeatSectionDialog ";
     EditText minStartText, secStartText, minEndText, secEndText;
     ImageButton closeSectionBtn;
     Button loopSectionBtn;
@@ -35,6 +36,7 @@ public class RepeatSectionDialog extends Dialog {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, " onCreate");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.dialog_loop_section);
 
@@ -77,4 +79,25 @@ public class RepeatSectionDialog extends Dialog {
             }
         });
     }
+
+//    @NonNull
+//    @Override
+//    public Bundle onSaveInstanceState() {
+//        super.onSaveInstanceState();
+//        onSaveInstanceState().putString("minStartText", String.valueOf(minStartText.getText()));
+//        onSaveInstanceState().putString("secStartText", String.valueOf(secStartText.getText()));
+//        onSaveInstanceState().putString("minEndText", String.valueOf(minEndText.getText()));
+//        onSaveInstanceState().putString("secEndText", String.valueOf(secEndText.getText()));
+//        return onSaveInstanceState();
+//    }
+//
+//    @Override
+//    public void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+//        super.onRestoreInstanceState(savedInstanceState);
+//        minStartText.setText(onSaveInstanceState().getString("minStartText","00"));
+//        secStartText.setText(onSaveInstanceState().getString("minStartText","00"));
+//        minEndText.setText(onSaveInstanceState().getString("minStartText","00"));
+//        secEndText.setText(onSaveInstanceState().getString("minStartText","00"));
+//    }
+
 }

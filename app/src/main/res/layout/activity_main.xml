@@ -50,11 +50,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:scaleType="fitCenter"
-                app:srcCompat="@drawable/girl_with_cat"/>
-            <TextureView
-                android:id="@+id/textureView_main"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"/>
+                app:srcCompat="@drawable/girl_with_cat"
+                android:contentDescription="thumbnail main image" />
 
         </RelativeLayout>
 

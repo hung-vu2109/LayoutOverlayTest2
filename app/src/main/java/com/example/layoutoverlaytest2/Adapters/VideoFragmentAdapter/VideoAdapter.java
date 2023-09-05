@@ -2,6 +2,7 @@ package com.example.layoutoverlaytest2.Adapters.VideoFragmentAdapter;
 
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_SONG_LIST;
+import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_VIDEO_LIST;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -98,7 +99,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoViewHolder> {
             MyInitialMediaPlayer.starterIndex = position;
             MyInitialMediaPlayer.isMusic = false;
 
-            Log.d("SongAdapter", String.valueOf(MyInitialMediaPlayer.starterIndex));
+            Log.d("VideoAdapter", String.valueOf(MyInitialMediaPlayer.starterIndex));
 
 
             Intent intent = new Intent(context, NotificationService.class);
@@ -108,7 +109,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoViewHolder> {
 //            intent.putExtra("MY_BUNDLE", bundle);
 //            intent.putExtra("SONG_LIST", songModelArrayList);
 
-            intent.putExtra(MY_COMMAND, PLAY_FROM_SONG_LIST);
+            intent.putExtra(MY_COMMAND, PLAY_FROM_VIDEO_LIST);
 
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
@@ -157,6 +158,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoViewHolder> {
             if (bitmapFutureTask.isDone()) {
                 Log.d(TAG + " generateThumbnail", bitmap1[0] + "");
                 imageView.setImageBitmap(bitmap1[0]);
+                executorService.shutdown();
                 isRunning = false;
             }
         }

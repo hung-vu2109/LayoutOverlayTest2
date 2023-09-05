@@ -5,10 +5,6 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.os.Build;
 
-import com.example.layoutoverlaytest2.Models.Song.SongModel;
-import com.example.layoutoverlaytest2.Models.Video.VideoModel;
-
-import java.util.ArrayList;
 
 public class ApplicationClass extends Application {
 
@@ -16,6 +12,7 @@ public class ApplicationClass extends Application {
     public static final String CHANNEL_ID_2="CHANNEL_2";
     public static final String MY_COMMAND="MY_COMMAND";
     public static final String PLAY_FROM_SONG_LIST="PLAY_FROM_SONG_LIST";
+    public static final String PLAY_FROM_VIDEO_LIST = "PLAY_FROM_VIDEO_LIST";
     public static final String REMOVE_SONG = "REMOVE SONG";
     public static final String ACTION_NEXT="NEXT";
     public static final String ACTION_PREV="PREV";
@@ -27,6 +24,8 @@ public class ApplicationClass extends Application {
     public static final String ACTION_STOP = "ACTION_STOP";
 
     public static volatile boolean isQueryDone = false;
+    public static volatile boolean isAliveMainActivity = true;
+    public static volatile boolean continuePlayVideo = false;
 
     @Override
     public void onCreate() {

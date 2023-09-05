@@ -4,10 +4,11 @@ package com.example.layoutoverlaytest2.Fragments;
 import static com.example.layoutoverlaytest2.Services.NotificationService.videoModelArrayList;
 
 import android.annotation.SuppressLint;
-import android.graphics.Bitmap;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
-import android.util.LruCache;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -25,6 +26,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.layoutoverlaytest2.Adapters.VideoFragmentAdapter.VideoAdapter;
 import com.example.layoutoverlaytest2.Models.Video.VideoModel;
 import com.example.layoutoverlaytest2.R;
+
 
 public class VideoFragment extends Fragment {
 
@@ -75,6 +77,15 @@ public class VideoFragment extends Fragment {
             fragmentVideoRecyclerView.removeAllViews();
             setAdapterToRecyclerView();
         }
+
+        if (item.getItemId() == R.id.popMode_Option){
+            Log.d(TAG, "Pop mode Option");
+            if(!checkOverlayPer()){
+                requestOverlayPer();
+            } else {
+//            startPopModeService();
+            }
+        }
         return super.onOptionsItemSelected(item);
     }
 
@@ -123,4 +134,15 @@ public class VideoFragment extends Fragment {
         fragmentVideoRecyclerView.setHasFixedSize(true);
     }
 
+    private boolean checkOverlayPer() {
+        Log.d(TAG, "Check Overlay Permission");
+        return Settings.canDrawOverlays(getContext());
+    }
+
+    private void requestOverlayPer() {
+        Log.d(TAG, "Request Overlay Permission");
+        Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:"+ requireContext().getPackageName()));
+        startActivity(intent);
+//        finish();
+    }
 }

@@ -1,6 +1,7 @@
 package com.example.layoutoverlaytest2.Services;
 
 
+import static com.example.layoutoverlaytest2.Activities.MainActivity.mainHandler;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_MINI_PLAY;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_NEXT;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PLAY;
@@ -12,7 +13,10 @@ import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_STOP;
 import static com.example.layoutoverlaytest2.ApplicationClass.CHANNEL_ID_1;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_SONG_LIST;
+import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_VIDEO_LIST;
 import static com.example.layoutoverlaytest2.ApplicationClass.REMOVE_SONG;
+import static com.example.layoutoverlaytest2.ApplicationClass.continuePlayVideo;
+import static com.example.layoutoverlaytest2.ApplicationClass.isAliveMainActivity;
 import static com.example.layoutoverlaytest2.ApplicationClass.isQueryDone;
 
 import android.Manifest;
@@ -31,12 +35,14 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.util.Log;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
@@ -46,6 +52,7 @@ import androidx.core.app.TaskStackBuilder;
 import com.example.layoutoverlaytest2.BroadcastReceiver.NotificationReceiver;
 import com.example.layoutoverlaytest2.Activities.MainActivity;
 import com.example.layoutoverlaytest2.Dialogs.QueryFileWaitingDialog;
+import com.example.layoutoverlaytest2.Fragments.VideoTextureViewFragment;
 import com.example.layoutoverlaytest2.Models.Song.ButtonMainObject;
 import com.example.layoutoverlaytest2.Models.Song.MiniObject;
 import com.example.layoutoverlaytest2.Models.Song.SongModel;
@@ -94,10 +101,18 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     boolean commandArrive = false;
     boolean setInitialItemNav = false;
 
+    public enum TYPE_OF_MEDIA {
+        MUSIC,
+        PLAY_VIDEO_AS_AUDIO,
+        VIDEO
+    }
+    public static volatile TYPE_OF_MEDIA media;
+    int currentPosition = -1;
 
     Runnable updateUiRunnable, notificationRunnable;
     MediaSession mediaSession;
     NotificationManagerCompat notificationManagerCompat;
+    VideoTextureViewFragment videoTextureViewFragment;
 
 
     @Override
@@ -210,6 +225,10 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
             switch (actionCommand) {
                 case PLAY_FROM_SONG_LIST:
                     Log.d(TAG, "Play from song list");
+                    setInitialDataSource();
+                    break;
+                case PLAY_FROM_VIDEO_LIST:
+                    Log.d(TAG, "Play from video list");
                     setInitialDataSource();
                     break;
 
@@ -341,6 +360,44 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         updateNotificationView();
     }
 
+    public void setCurrentPositionMediaToContinue(){
+        if (currentVideo != null) {
+            currentPosition = mediaPlayer.getCurrentPosition();
+            Log.d(TAG, " setCurrentPositionMediaToContinue: " + currentPosition + "");
+        }
+    }
+    public VideoTextureViewFragment getVideoTextureViewFragment(){
+        if (currentVideo != null && getTypeOfMedia() == TYPE_OF_MEDIA.VIDEO && isAliveMainActivity) {
+            Log.d(TAG, " Start New Video ");
+            // start new video
+            videoTextureViewFragment = new VideoTextureViewFragment(this, mediaPlayer, currentVideo.getPathVideo(), currentPosition);
+            currentPosition = -1;
+        }
+            return videoTextureViewFragment;
+    }
+
+    public void ContinuePlayAsVideoWhenStopActivity(){
+        if (currentVideo != null && getTypeOfMedia() == TYPE_OF_MEDIA.VIDEO){
+            if (continuePlayVideo){
+//                Log.d(TAG, " Continue Play Video ");
+//                // continue play Video
+//                mediaPlayer.stop();
+//                if (currentPosition > -1) {
+//                    videoTextureViewFragment = new VideoTextureViewFragment(this, mediaPlayer, currentVideo.getPathVideo(), currentPosition);
+//                }
+                boolean isPlaying = mediaPlayer.isPlaying();
+                sendEmptyMsgToMainActivity(1);
+                if (!isPlaying){
+                    mediaPlayer.pause();
+                }
+                continuePlayVideo = false;
+            }
+        }
+    }
+    public void ContinuePlayAsAudioWhenActivityDestroy(){
+
+    }
+
     public class MyBinder extends Binder {
         public NotificationService getService() {
             return NotificationService.this;
@@ -350,7 +407,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     public void initialMusicPlayer() {
 
         Log.d(TAG, "initialMusicPlayer");
-//        mediaPlayer.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
+        mediaPlayer.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
 //        mediaPlayer.setOnPreparedListener(this);
 //        mediaPlayer.prepare();
         mediaPlayer.setOnErrorListener(this);
@@ -358,16 +415,36 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
     }
 
+    public TYPE_OF_MEDIA getTypeOfMedia(){
+        TYPE_OF_MEDIA type_of_media;
+
+        if (MyInitialMediaPlayer.isMusic){
+            MyInitialMediaPlayer.playAsAudio = false;
+            type_of_media = TYPE_OF_MEDIA.MUSIC;
+        } else {
+            if (MyInitialMediaPlayer.playAsAudio){
+                type_of_media = TYPE_OF_MEDIA.PLAY_VIDEO_AS_AUDIO;
+            } else {
+                type_of_media = TYPE_OF_MEDIA.VIDEO;
+            }
+        }
+        return type_of_media;
+    }
     public void setInitialDataSource() {
         Log.d(TAG, "setInitialDatasource");
-        Log.d(TAG + "Song Position", String.valueOf(MyInitialMediaPlayer.starterIndex));
+        Log.d(TAG + "Media File Position", String.valueOf(MyInitialMediaPlayer.starterIndex));
         if (MyInitialMediaPlayer.isMusic){
             currentSong = songModelArrayList.get(MyInitialMediaPlayer.starterIndex);
         } else {
             currentVideo = videoModelArrayList.get(MyInitialMediaPlayer.starterIndex);
         }
 
-        playMusic();
+        if (getTypeOfMedia() == TYPE_OF_MEDIA.MUSIC || getTypeOfMedia() == TYPE_OF_MEDIA.PLAY_VIDEO_AS_AUDIO) {
+            playMusic();
+        }
+        if (getTypeOfMedia() == TYPE_OF_MEDIA.VIDEO){
+            playVideo();
+        }
     }
 
     public void removeSongInPlaylist() {
@@ -379,7 +456,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         Log.d(TAG, "Total songs after " + songModelArrayList.size());
     }
 
-    public void updateUiFromService(Activity activity,
+    public void updateUiFromService(@NonNull Activity activity,
                                     ButtonMainObject buttonMainObject,
                                     TextViewMainObject textViewMainObject,
                                     SeekBar seekBar,
@@ -427,6 +504,10 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                     }
                 }
                 Log.d(TAG + " updateUiFromService", " is Running...");
+                Log.d(TAG + " TYPE_OF_MEDIA ", getTypeOfMedia()+"");
+
+
+
                 try {
                     handler.postDelayed(updateUiRunnable, 200);
                 } catch (Exception e) {
@@ -437,9 +518,11 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
     }
     public void stopUpdateUi(){
+        Log.d(TAG, " stopUpdateUI");
         handler.removeCallbacks(updateUiRunnable);
     }
     private void stopMyProcess(){
+        Log.d(TAG, " stopMyProcess");
 //        Process.killProcess(Process.myPid());
         System.exit(0);
     }
@@ -454,19 +537,45 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
             } else {
                 mediaPlayer.setDataSource(currentVideo.getPathVideo());
             }
-            mediaPlayer.prepare();
-            mediaPlayer.start();
+            mediaPlayer.prepareAsync();
+            mediaPlayer.setOnPreparedListener(MediaPlayer::start);
 
             MyInitialMediaPlayer.isStarted = true;
-
             MyInitialMediaPlayer.isPlaying = true;
+
+            sendEmptyMsgToMainActivity(0);
 
             updateNotificationView();
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+    }
+    private void playVideo(){
+        Log.d(TAG, "playVideo method");
+
+        sendEmptyMsgToMainActivity(1);
+
+        MyInitialMediaPlayer.isStarted = true;
+        MyInitialMediaPlayer.isPlaying = true;
+        updateNotificationView();
     }
 
+    private void sendEmptyMsgToMainActivity(int msgWhat){
+
+        if (isAliveMainActivity) {
+            Log.d(TAG + " sendEmptyMsgToMainActivity", isAliveMainActivity+"");
+            if (msgWhat == 0) {
+                // set default image
+                mainHandler.sendEmptyMessage(0);
+            }
+            if (msgWhat == 1) {
+                // set video textureView
+                mainHandler.sendEmptyMessage(1);
+            }
+        }
+
+    }
     private void playPrevSong() {
         Log.d(TAG + "playPrevSong Method", "is clicked");
         if (isShuffleSongs) {
@@ -518,8 +627,8 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
             if (loopAllSongs) {
                 Log.d(TAG + "", "Repeat all song with shuffle mode");
                 playNextSong();
-                setCommandArrive();
                 setInitialDataSource();
+                setCommandArrive();
             }
             if (loopOneSong){
                 setInitialDataSource();
@@ -893,7 +1002,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         return mediaName;
     }
     private int getMediaSizeArrayList(){
-        int size = 0;
+        int size;
         if (MyInitialMediaPlayer.isMusic){
             size = songModelArrayList.size();
         } else {

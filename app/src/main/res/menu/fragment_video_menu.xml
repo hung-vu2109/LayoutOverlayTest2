@@ -15,6 +15,28 @@
         <item android:id="@+id/linearView"
             android:icon="@drawable/baseline_view_list_24"
             app:showAsAction="ifRoom|withText"
-            tools:ignore="MenuTitle" />
+            tools:ignore="MenuTitle"/>
+    </group>
+    <group
+        android:visible="true">
+        <item
+            android:id="@+id/fullScreenMode_Option"
+            android:title="Full Screen"
+            app:showAsAction="withText"/>
+        <item
+            android:id="@+id/popMode_Option"
+            android:icon="@drawable/baseline_picture_in_picture_24"
+            android:title="Picture on Picture"
+            app:showAsAction="withText"/>
+    </group>
+    <group
+        android:visible="true"
+        android:menuCategory="container"
+        android:checkableBehavior="single">
+        <item
+            android:id="@+id/playAsAudio"
+            android:title="Play Video as Audio"
+            android:icon="@drawable/baseline_music_note_24"
+            app:showAsAction="collapseActionView"/>
     </group>
 </menu>

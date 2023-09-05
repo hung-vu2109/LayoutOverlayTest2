@@ -7,6 +7,9 @@ import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PREV;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_REPEAT;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_SHUFFLE;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
+import static com.example.layoutoverlaytest2.ApplicationClass.continuePlayVideo;
+import static com.example.layoutoverlaytest2.ApplicationClass.isAliveMainActivity;
+import static com.example.layoutoverlaytest2.Services.NotificationService.media;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -18,12 +21,14 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.Message;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.TextureView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
@@ -44,11 +49,13 @@ import com.example.layoutoverlaytest2.Dialogs.QueryFileWaitingDialog;
 import com.example.layoutoverlaytest2.Dialogs.RepeatSectionDialog;
 import com.example.layoutoverlaytest2.Fragments.MusicFragment;
 import com.example.layoutoverlaytest2.Fragments.VideoFragment;
+import com.example.layoutoverlaytest2.Fragments.VideoTextureViewFragment;
 import com.example.layoutoverlaytest2.Models.Song.ButtonMainObject;
 import com.example.layoutoverlaytest2.Models.Song.MiniObject;
 import com.example.layoutoverlaytest2.Models.Song.TextViewMainObject;
 import com.example.layoutoverlaytest2.R;
 import com.example.layoutoverlaytest2.Services.NotificationService;
+import com.example.layoutoverlaytest2.Utils.MyInitialMediaPlayer;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.navigation.NavigationBarView;
 
@@ -63,13 +70,14 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     ImageButton pauseBtn, nextBtn, prevBtn, loopBtn, shuffleBtn;
     SeekBar seekBar;
     ImageView thumbnail_imageView;
-    TextureView textViewVideo;
     NotificationService notificationService;
     FragmentManager fragmentManager = getSupportFragmentManager();
     MusicFragment musicFragment = new MusicFragment();
     VideoFragment videoFragment = new VideoFragment();
+    VideoTextureViewFragment videoTextureViewFragment;
     BottomNavigationView bottomNavigationView;
     QueryFileWaitingDialog queryFileWaitingDialog;
+    public static volatile Handler mainHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,7 +96,6 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         endTime = findViewById(R.id.tv_player_endTime);
 
         thumbnail_imageView = findViewById(R.id.thumbnail_mainImage);
-        textViewVideo = findViewById(R.id.textureView_main);
 
 //        Button
         pauseBtn = findViewById(R.id.btn_player_pauseSong);
@@ -110,13 +117,9 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         queryFileWaitingDialog = new QueryFileWaitingDialog(this);
 
-       if(!checkReadStoragePer()){
-           requestReadStoragePer();
-       }
-//       else if (videoModelArrayList.isEmpty()){
-//           Log.d(TAG + "query video arraylist", " starting");
-//           queryMusicAndVideo();
-//       }
+        if(!checkReadStoragePer()){
+            requestReadStoragePer();
+        }
 
 
     }
@@ -138,14 +141,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             showRepeatSectionDialog();
         }
 
-        if (itemId == R.id.pipMode_Option){
-            Log.d(TAG, "Pip mode Option");
-            if(!checkOverlayPer()){
-                requestOverlayPer();
-            } else {
-//            startPipModeService();
-            }
-        }
+
 
         return super.onOptionsItemSelected(item);
     }
@@ -159,20 +155,32 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 //        } else {
 //            Log.d(TAG+"Song list Size", songModelArrayList.size()+"");
 //        }
+        Intent intent = new Intent(this, NotificationService.class);
+        bindService(intent, this, BIND_AUTO_CREATE);
+
+        isAliveMainActivity = true;
+        MyInitialMediaPlayer.playAsAudio = false;
     }
 
-    private boolean checkOverlayPer() {
-        Log.d(TAG, "Check Overlay Permission");
-        return Settings.canDrawOverlays(MainActivity.this);
+    @Override
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
+        Log.d(TAG, " onSaveInstanceState");
+        super.onSaveInstanceState(outState);
     }
 
-    private void requestOverlayPer() {
-
-        Log.d(TAG, "Request Overlay Permission");
-        Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:"+getPackageName()));
-        startActivity(intent);
-//        finish();
+    @Override
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        Log.d(TAG, " onRestoreInstanceState");
+        super.onRestoreInstanceState(savedInstanceState);
     }
+
+    @Override
+    public void onStateNotSaved() {
+        Log.d(TAG, " onStateNotSaved");
+        super.onStateNotSaved();
+    }
+
+
 
     private boolean checkReadStoragePer() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -284,18 +292,14 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     protected void onPause() {
         Log.d(TAG, "onPause");
         super.onPause();
-        if (notificationService != null){
-            notificationService.stopUpdateUi();
-        }
-        unbindService(this);
+
     }
 
     @Override
     protected void onResume() {
         Log.d(TAG, "onResume");
         super.onResume();
-        Intent intent = new Intent(this, NotificationService.class);
-        bindService(intent, this, BIND_AUTO_CREATE);
+
     }
 
     @Override
@@ -303,6 +307,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         NotificationService.MyBinder myBinder = (NotificationService.MyBinder) iBinder;
         notificationService = myBinder.getService();
         Log.e(TAG+"Service Connection", notificationService +"");
+
 
 //        update ui after activity is destroyed
         notificationService.setCommandArrive();
@@ -342,13 +347,36 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         mini_songName.setSelected(true);
 
-        mini_playBtn.setOnClickListener(view -> {
-            mini_playBtnClicked();
-        });
+        mini_playBtn.setOnClickListener(view -> mini_playBtnClicked());
 
-        mini_closeBtn.setOnClickListener(view -> {
-            finish();
-        });
+        mini_closeBtn.setOnClickListener(view -> finish());
+
+
+
+        notificationService.setCurrentPositionMediaToContinue();
+        mainHandler = new Handler(Looper.getMainLooper()){
+            @Override
+            public void handleMessage(@NonNull Message msg) {
+                super.handleMessage(msg);
+                videoTextureViewFragment = notificationService.getVideoTextureViewFragment();
+
+                if (videoTextureViewFragment != null && isAliveMainActivity){
+                    if (msg.what == 1){
+                        // set video textureView
+                        Log.d(TAG + " handler ", " msg.what = 1");
+                        if (!getSupportFragmentManager().isDestroyed()){
+                            getSupportFragmentManager().beginTransaction().replace(R.id.top_image, videoTextureViewFragment).commit();
+                        }
+                    }
+                    if (msg.what == 0){
+                        // set default thumbnail
+                        Log.d(TAG + " handler ", " msg.what = 0");
+                        getSupportFragmentManager().beginTransaction().remove(videoTextureViewFragment).commit();
+                    }
+                }
+            }
+        };
+        notificationService.ContinuePlayAsVideoWhenStopActivity();
     }
 
 
@@ -378,6 +406,23 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     protected void onStop() {
         Log.d(TAG, "onStop");
         super.onStop();
+
+        if (notificationService != null){
+            notificationService.stopUpdateUi();
+            media = notificationService.getTypeOfMedia();
+        }
+
+
+        if (media == NotificationService.TYPE_OF_MEDIA.VIDEO) {
+            assert notificationService != null;
+            if (notificationService.mediaPlayer.isPlaying()) {
+                continuePlayVideo = true;
+                Log.d(TAG, " continuePlayVideo: " + continuePlayVideo + "");
+            }
+        }
+        isAliveMainActivity = false;
+        MyInitialMediaPlayer.playAsAudio = true;
+        unbindService(this);
     }
 
     @Override

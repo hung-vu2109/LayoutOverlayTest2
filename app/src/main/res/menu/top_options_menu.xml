@@ -9,9 +9,9 @@
             android:title="Repeat Section"
             app:showAsAction="withText"/>
         <item
-            android:id="@+id/pipMode_Option"
-            android:icon="@drawable/baseline_picture_in_picture_24"
-            android:title="Picture in Picture"
-            app:showAsAction="collapseActionView" />
+            android:id="@+id/tempoAndPitch_Option"
+            android:title="Tempos and Pitch"
+            app:showAsAction="withText"/>
+
     </group>
 </menu>
