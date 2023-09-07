@@ -121,6 +121,7 @@
             android:background="@drawable/img_background">
             <TextView
                 android:id="@+id/tv_player_songName"
+                android:visibility="gone"
                 android:text="Song Name"
                 android:textSize="22sp"
                 android:textColor="@color/white"

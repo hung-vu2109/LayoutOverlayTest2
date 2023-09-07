@@ -25,7 +25,6 @@ public class ApplicationClass extends Application {
 
     public static volatile boolean isQueryDone = false;
     public static volatile boolean isAliveMainActivity = true;
-    public static volatile boolean continuePlayVideo = false;
 
     @Override
     public void onCreate() {

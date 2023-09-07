@@ -36,7 +36,7 @@ public class QueryVideoFilesCallable implements Callable<ArrayList<VideoModel>>{
         videoModelArrayList = queryVideoFiles();
         return videoModelArrayList;
     }
-    final String TAG = "Query Video Files";
+    final String TAG = "Query Video Files ";
     public ArrayList<VideoModel> queryVideoFiles(){
         Log.d(TAG + "queryVideoFiles method", " started");
         videoModelArrayList = new ArrayList<>();

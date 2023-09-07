@@ -3,7 +3,7 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="9dp">
+    android:padding="3dp">
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -30,7 +30,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingBottom="9dp"
+        android:paddingBottom="5dp"
         android:text="Set Start Point and End Point to repeat section of this song"
         android:textSize="16sp"
         android:textStyle="italic"

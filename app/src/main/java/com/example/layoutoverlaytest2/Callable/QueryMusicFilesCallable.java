@@ -28,7 +28,7 @@ public class QueryMusicFilesCallable implements Callable<ArrayList<SongModel>>{
         songModelArrayList = queryMusicFiles();
         return songModelArrayList;
     }
-    final String TAG = "Query Song Files";
+    final String TAG = "Query Song Files ";
     private ArrayList<SongModel> queryMusicFiles(){
 
         songModelArrayList = new ArrayList<>();
@@ -49,14 +49,10 @@ public class QueryMusicFilesCallable implements Callable<ArrayList<SongModel>>{
         String selection = MediaStore.Audio.Media.IS_MUSIC + "!=0";
         String sortOrder = MediaStore.Audio.Media.TITLE + " ASC";
 
-        Log.d(TAG + "query song files", "starting...");
         try (Cursor cursor = context.getContentResolver().query(collectionUri, projection, selection, null, sortOrder)) {
 
-//            int thumbnailColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID);
-//            int _thumbnailId = cursor.getInt(thumbnailColumn);
-//            Uri thumbnailUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, _thumbnailId);
-//            Bitmap bitmap = getContext().getContentResolver().loadThumbnail(thumbnailUri, new Size(64, 64), null);
-
+            Log.d(TAG + "query song files", "starting...");
+            Log.d(TAG + "Current Thread ", Thread.currentThread().getName()+" starting...");
             int titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE);
             int durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION);
             int pathColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA);

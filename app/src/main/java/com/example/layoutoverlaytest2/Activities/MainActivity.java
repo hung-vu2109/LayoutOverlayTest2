@@ -7,17 +7,19 @@ import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PREV;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_REPEAT;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_SHUFFLE;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
-import static com.example.layoutoverlaytest2.ApplicationClass.continuePlayVideo;
 import static com.example.layoutoverlaytest2.ApplicationClass.isAliveMainActivity;
-import static com.example.layoutoverlaytest2.Services.NotificationService.media;
+import static com.example.layoutoverlaytest2.Services.NotificationService.updateFragment;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.net.Uri;
+import android.content.res.Configuration;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -25,10 +27,10 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
-import android.provider.Settings;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.OrientationEventListener;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
@@ -39,6 +41,7 @@ import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -77,14 +80,16 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     VideoTextureViewFragment videoTextureViewFragment;
     BottomNavigationView bottomNavigationView;
     QueryFileWaitingDialog queryFileWaitingDialog;
+    OrientationListener orientationListener;
     public static volatile Handler mainHandler;
+    public static boolean requestPermissionResult = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate");
-        setContentView(R.layout.activity_main);
 
+        setContentView(R.layout.activity_main);
 
         bottomNavigationView = findViewById(R.id.bottom_nav);
         bottomNavigationView.setOnItemSelectedListener(this);
@@ -121,7 +126,7 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
             requestReadStoragePer();
         }
 
-
+        orientationListener = new OrientationListener(this);
     }
 
 
@@ -160,6 +165,14 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
 
         isAliveMainActivity = true;
         MyInitialMediaPlayer.playAsAudio = false;
+
+        orientationListener.enable();
+    }
+
+    @Override
+    protected void onRestart() {
+        Log.d(TAG, " onRestart");
+        super.onRestart();
     }
 
     @Override
@@ -180,7 +193,20 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         super.onStateNotSaved();
     }
 
-
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        Log.d(TAG, " onConfigurationChanged");
+        super.onConfigurationChanged(newConfig);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            int orientationState = orientationListener.getCurrentOrientation();
+            if (orientationState == 2 || orientationState == 4) {
+                actionBar.hide();
+            } else if (orientationState == 1 || orientationState == 3) {
+                actionBar.show();
+            }
+        }
+    }
 
     private boolean checkReadStoragePer() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -210,13 +236,11 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
                     registerForActivityResult(new ActivityResultContracts.RequestPermission(), new ActivityResultCallback<Boolean>() {
                         @Override
                         public void onActivityResult(Boolean result) {
-
                             if (result) {
-//                                bottomNavigationView.setSelectedItemId(R.id.nav_fragment_container_video);
-//                                bottomNavigationView.setSelectedItemId(R.id.nav_fragment_container_music);
+                                requestPermissionResult = true;
+                                clearMusicFragment();
                                 Toast.makeText(MainActivity.this, "Read permission Ok", Toast.LENGTH_SHORT).show();
                             } else {
-
                                 Toast.makeText(MainActivity.this, "Error!! Can't access to storage", Toast.LENGTH_SHORT).show();
                             }
                         }
@@ -266,16 +290,23 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
     }
 
     private void setMusicFragment(){
+        Log.d(TAG, " setMusicFragment");
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.setReorderingAllowed(true);
         fragmentTransaction.replace(R.id.fragmentToReplace_container, musicFragment).addToBackStack("Steve").commit();
 //        Toast.makeText(this, "Music Tap", Toast.LENGTH_SHORT).show();
     }
     private void setVideoFragment(){
+        Log.d(TAG, " setVideoFragment");
         FragmentTransaction fragmentTransaction1 = fragmentManager.beginTransaction();
         fragmentTransaction1.setReorderingAllowed(true);
         fragmentTransaction1.replace(R.id.fragmentToReplace_container, videoFragment).addToBackStack("Steve").commit();
 //        Toast.makeText(this, "Video Tap", Toast.LENGTH_SHORT).show();
+    }
+    private void clearMusicFragment(){
+        Log.d(TAG, " clearMusicFragment");
+        FragmentTransaction fragmentTransaction2 = fragmentManager.beginTransaction();
+        fragmentTransaction2.remove(musicFragment).commit();
     }
 
     @Override
@@ -407,22 +438,14 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         Log.d(TAG, "onStop");
         super.onStop();
 
-        if (notificationService != null){
+        if (notificationService != null) {
             notificationService.stopUpdateUi();
-            media = notificationService.getTypeOfMedia();
-        }
-
-
-        if (media == NotificationService.TYPE_OF_MEDIA.VIDEO) {
-            assert notificationService != null;
-            if (notificationService.mediaPlayer.isPlaying()) {
-                continuePlayVideo = true;
-                Log.d(TAG, " continuePlayVideo: " + continuePlayVideo + "");
-            }
         }
         isAliveMainActivity = false;
         MyInitialMediaPlayer.playAsAudio = true;
+        updateFragment = true;
         unbindService(this);
+        orientationListener.disable();
     }
 
     @Override
@@ -473,5 +496,41 @@ public class MainActivity extends AppCompatActivity implements NavigationBarView
         dialog.show();
     }
 
+    private static class OrientationListener extends OrientationEventListener{
 
+        final int PORTRAIT = 1;
+        final int LANDSCAPE = 2;
+        final int REVERT_PORTRAIT = 3;
+        final int REVERT_LANDSCAPE = 4;
+
+        int currentOrientation = 0;
+        Context context;
+
+        public OrientationListener(Context context) {
+            super(context);
+            this.context = context;
+        }
+
+
+        @Override
+        public void onOrientationChanged(int orientation) {
+            Log.d("OrientationListener", " onOrientationChanged");
+
+            if ((orientation < 45 || orientation > 315) && currentOrientation != PORTRAIT){
+                currentOrientation = PORTRAIT;
+            } else if ((orientation > 45 && orientation < 135) && currentOrientation != LANDSCAPE){
+                currentOrientation = LANDSCAPE;
+            } else if ((orientation > 135 && orientation < 225) && currentOrientation != REVERT_PORTRAIT){
+                currentOrientation = REVERT_PORTRAIT;
+            } else if ((orientation > 225 && orientation < 315) && currentOrientation != REVERT_LANDSCAPE){
+                currentOrientation = REVERT_LANDSCAPE;
+            }
+        }
+
+        public int getCurrentOrientation(){
+            return currentOrientation;
+        }
+
+
+    }
 }

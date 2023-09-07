@@ -157,10 +157,10 @@
             android:id="@id/top_image"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:layout_marginTop="2dp"
-            android:layout_marginBottom="2dp"
+            android:layout_marginTop="1dp"
+            android:layout_marginBottom="1dp"
             motion:layout_constraintBottom_toBottomOf="@id/top_image_container"
-            motion:layout_constraintDimensionRatio="H,1:2.5"
+            motion:layout_constraintDimensionRatio="H,1:1.78"
             motion:layout_constraintStart_toStartOf="@id/top_image_container"
             motion:layout_constraintTop_toTopOf="@id/top_image_container" />
 

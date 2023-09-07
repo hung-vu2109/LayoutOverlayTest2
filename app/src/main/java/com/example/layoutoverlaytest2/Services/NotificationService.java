@@ -2,6 +2,7 @@ package com.example.layoutoverlaytest2.Services;
 
 
 import static com.example.layoutoverlaytest2.Activities.MainActivity.mainHandler;
+import static com.example.layoutoverlaytest2.Activities.MainActivity.requestPermissionResult;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_MINI_PLAY;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_NEXT;
 import static com.example.layoutoverlaytest2.ApplicationClass.ACTION_PLAY;
@@ -15,9 +16,9 @@ import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_SONG_LIST;
 import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_VIDEO_LIST;
 import static com.example.layoutoverlaytest2.ApplicationClass.REMOVE_SONG;
-import static com.example.layoutoverlaytest2.ApplicationClass.continuePlayVideo;
 import static com.example.layoutoverlaytest2.ApplicationClass.isAliveMainActivity;
 import static com.example.layoutoverlaytest2.ApplicationClass.isQueryDone;
+import static com.example.layoutoverlaytest2.Utils.MyInitialMediaPlayer.stateToContinuePlayingVideo;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -33,6 +34,7 @@ import android.media.MediaPlayer;
 import android.media.session.MediaSession;
 import android.os.Binder;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
@@ -48,6 +50,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.core.app.TaskStackBuilder;
+import androidx.core.content.ContextCompat;
 
 import com.example.layoutoverlaytest2.BroadcastReceiver.NotificationReceiver;
 import com.example.layoutoverlaytest2.Activities.MainActivity;
@@ -78,6 +81,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     static final String TAG = "NotificationService ";
     static final String BUNDLE_NAME = "MY_BUNDLE";
     static final String DATA_KEY = "SONG_BUNDLE";
+    static final String[] RUNTIME_PERMISSION = { Manifest.permission.READ_EXTERNAL_STORAGE };
     private static final int REQUEST_CODE = 592431;
     public MediaPlayer mediaPlayer = MyInitialMediaPlayer.getInstance();
     private final IBinder mBinder = new MyBinder();
@@ -100,6 +104,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     boolean showNotificationStarted = false;
     boolean commandArrive = false;
     boolean setInitialItemNav = false;
+    public static boolean updateFragment = false;
 
     public enum TYPE_OF_MEDIA {
         MUSIC,
@@ -114,7 +119,6 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     NotificationManagerCompat notificationManagerCompat;
     VideoTextureViewFragment videoTextureViewFragment;
 
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -122,7 +126,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
 //        check song list from adapter
         if (songModelArrayList.isEmpty() || videoModelArrayList.isEmpty()) {
-            Log.d(TAG, "songModelArrayList: NULL");
+            Log.d(TAG, "songModelArrayList: Empty");
             queryMusicAndVideo();
         } else {
 //            for (SongModel i : songModelArrayList) {
@@ -132,7 +136,20 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         initialMusicPlayer();
     }
 
-
+    private boolean checkReadStoragePer() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Log.d(TAG, "Check Reading Storage Permission for API 30");
+            return Environment.isExternalStorageManager();
+        } else {
+            Log.d(TAG, "Check Reading Storage Permission");
+            return ContextCompat.checkSelfPermission(this, RUNTIME_PERMISSION[0]) == PackageManager.PERMISSION_GRANTED;
+        }
+    }
+    public void shutdownNotificationService(){
+        Log.d(TAG, " shutdown service");
+        onUnbind(new Intent(this, MainActivity.class));
+        this.stopSelf();
+    }
     public synchronized void queryMusicAndVideo(){
         FutureTask<ArrayList<VideoModel>> arrayListFutureTask1 = new FutureTask<ArrayList<VideoModel>>(queryVideoFilesCallable){
             @Override
@@ -321,17 +338,6 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         return mBinder;
     }
 
-//    @Override
-//    public void onCompletion(MediaPlayer mediaPlayer) {
-//        Log.d(TAG+" MediaPlayer", "onCompletion");
-//    }
-
-//    @Override
-//    public void onPrepared(MediaPlayer mediaPlayer) {
-//        Log.d(TAG+" MediaPlayer", "onPrepared");
-//    }
-
-
     @Override
     public void onDestroy() {
         Log.d(TAG, "onDestroy");
@@ -360,44 +366,34 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         updateNotificationView();
     }
 
+    /*************************************************************************  updateTextureView  ************************************************************************/
     public void setCurrentPositionMediaToContinue(){
         if (currentVideo != null) {
             currentPosition = mediaPlayer.getCurrentPosition();
             Log.d(TAG, " setCurrentPositionMediaToContinue: " + currentPosition + "");
         }
     }
+    private boolean getIsPlayingVideoState(){
+        stateToContinuePlayingVideo = mediaPlayer.isPlaying();
+        return stateToContinuePlayingVideo;
+    }
     public VideoTextureViewFragment getVideoTextureViewFragment(){
         if (currentVideo != null && getTypeOfMedia() == TYPE_OF_MEDIA.VIDEO && isAliveMainActivity) {
             Log.d(TAG, " Start New Video ");
             // start new video
-            videoTextureViewFragment = new VideoTextureViewFragment(this, mediaPlayer, currentVideo.getPathVideo(), currentPosition);
+            videoTextureViewFragment = new VideoTextureViewFragment(this, mediaPlayer, currentVideo.getPathVideo(), currentPosition, getIsPlayingVideoState());
             currentPosition = -1;
         }
             return videoTextureViewFragment;
     }
 
     public void ContinuePlayAsVideoWhenStopActivity(){
-        if (currentVideo != null && getTypeOfMedia() == TYPE_OF_MEDIA.VIDEO){
-            if (continuePlayVideo){
-//                Log.d(TAG, " Continue Play Video ");
-//                // continue play Video
-//                mediaPlayer.stop();
-//                if (currentPosition > -1) {
-//                    videoTextureViewFragment = new VideoTextureViewFragment(this, mediaPlayer, currentVideo.getPathVideo(), currentPosition);
-//                }
-                boolean isPlaying = mediaPlayer.isPlaying();
-                sendEmptyMsgToMainActivity(1);
-                if (!isPlaying){
-                    mediaPlayer.pause();
-                }
-                continuePlayVideo = false;
-            }
+        if (currentVideo != null && getTypeOfMedia() == TYPE_OF_MEDIA.VIDEO && isAliveMainActivity){
+            sendEmptyMsgToMainActivity(1);
         }
     }
-    public void ContinuePlayAsAudioWhenActivityDestroy(){
 
-    }
-
+    /*************************************************************************  updateTextureView  ************************************************************************/
     public class MyBinder extends Binder {
         public NotificationService getService() {
             return NotificationService.this;
@@ -408,8 +404,6 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
         Log.d(TAG, "initialMusicPlayer");
         mediaPlayer.setWakeMode(this, PowerManager.PARTIAL_WAKE_LOCK);
-//        mediaPlayer.setOnPreparedListener(this);
-//        mediaPlayer.prepare();
         mediaPlayer.setOnErrorListener(this);
         mediaPlayer.setOnCompletionListener(this);
 
@@ -492,7 +486,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                     }
 
                 } else {
-
+                    // update fragment when queryFile is done
                     if (!setInitialItemNav) {
                         if (!isQueryDone) {
                             queryFileWaitingDialog.show();
@@ -503,10 +497,25 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                         }
                     }
                 }
-                Log.d(TAG + " updateUiFromService", " is Running...");
-                Log.d(TAG + " TYPE_OF_MEDIA ", getTypeOfMedia()+"");
 
-
+                // update fragment when come back to activity
+                if (setInitialItemNav){
+                    if (updateFragment){
+                        media = getTypeOfMedia();
+                        if (media == TYPE_OF_MEDIA.MUSIC){
+                            bottomNavigationView.setSelectedItemId(R.id.nav_fragment_container_music);
+                        } else {
+                            bottomNavigationView.setSelectedItemId(R.id.nav_fragment_container_video);
+                        }
+                        updateFragment = false;
+                    }
+                }
+                // update fragment for request permission
+                if (requestPermissionResult){
+                    queryMusicAndVideo();
+                    requestPermissionResult = false;
+                    setInitialItemNav = false;
+                }
 
                 try {
                     handler.postDelayed(updateUiRunnable, 200);
@@ -788,7 +797,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                     builder.setContentIntent(mainPendingIntent);
                     builder.setOngoing(true);
                     builder.setOnlyAlertOnce(true);
-                    builder.setAutoCancel(true);
+//                    builder.setAutoCancel(true);
                     builder.addAction(R.drawable.baseline_skip_previous_24, "Previous Song", prevPending);
                     builder.addAction(intPlayIcon, "Play Song", playPending);
                     builder.addAction(R.drawable.baseline_skip_next_24, "Next Song", nextPending);

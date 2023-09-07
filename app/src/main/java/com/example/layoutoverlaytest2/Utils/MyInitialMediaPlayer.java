@@ -20,6 +20,7 @@ public class MyInitialMediaPlayer {
     public static boolean isMusic = true;
     public static boolean isPipMode = false;
     public static boolean playAsAudio = false;
+    public static boolean stateToContinuePlayingVideo = false;
 
 
     public static void setStarterIndex(int starterIndex) {

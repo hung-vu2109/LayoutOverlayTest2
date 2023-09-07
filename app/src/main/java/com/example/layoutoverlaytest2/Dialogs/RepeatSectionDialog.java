@@ -80,24 +80,24 @@ public class RepeatSectionDialog extends Dialog {
         });
     }
 
-//    @NonNull
-//    @Override
-//    public Bundle onSaveInstanceState() {
-//        super.onSaveInstanceState();
-//        onSaveInstanceState().putString("minStartText", String.valueOf(minStartText.getText()));
-//        onSaveInstanceState().putString("secStartText", String.valueOf(secStartText.getText()));
-//        onSaveInstanceState().putString("minEndText", String.valueOf(minEndText.getText()));
-//        onSaveInstanceState().putString("secEndText", String.valueOf(secEndText.getText()));
-//        return onSaveInstanceState();
-//    }
-//
-//    @Override
-//    public void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
-//        super.onRestoreInstanceState(savedInstanceState);
-//        minStartText.setText(onSaveInstanceState().getString("minStartText","00"));
-//        secStartText.setText(onSaveInstanceState().getString("minStartText","00"));
-//        minEndText.setText(onSaveInstanceState().getString("minStartText","00"));
-//        secEndText.setText(onSaveInstanceState().getString("minStartText","00"));
-//    }
+    @NonNull
+    @Override
+    public Bundle onSaveInstanceState() {
+        super.onSaveInstanceState();
+        onSaveInstanceState().putString("minStartText", String.valueOf(minStartText.getText()));
+        onSaveInstanceState().putString("secStartText", String.valueOf(secStartText.getText()));
+        onSaveInstanceState().putString("minEndText", String.valueOf(minEndText.getText()));
+        onSaveInstanceState().putString("secEndText", String.valueOf(secEndText.getText()));
+        return onSaveInstanceState();
+    }
+
+    @Override
+    public void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        minStartText.setText(onSaveInstanceState().getString("minStartText","00"));
+        secStartText.setText(onSaveInstanceState().getString("secStartText","00"));
+        minEndText.setText(onSaveInstanceState().getString("minEndText","00"));
+        secEndText.setText(onSaveInstanceState().getString("secEndText","00"));
+    }
 
 }
