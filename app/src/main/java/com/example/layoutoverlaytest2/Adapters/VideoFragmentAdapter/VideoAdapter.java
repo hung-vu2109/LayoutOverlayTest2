@@ -3,6 +3,7 @@ package com.example.layoutoverlaytest2.Adapters.VideoFragmentAdapter;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_SONG_LIST;
 import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_VIDEO_LIST;
+import static com.example.layoutoverlaytest2.Services.NotificationService.media;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -95,6 +96,7 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoViewHolder> {
 
 
         holder.itemView.setOnClickListener(view -> {
+            media = NotificationService.TYPE_OF_MEDIA.VIDEO;
             Log.d(TAG+ " onBindViewHolder", videoModel.getTitleVideo()+" is Clicked");
             MyInitialMediaPlayer.starterIndex = position;
             MyInitialMediaPlayer.isMusic = false;
@@ -184,11 +186,11 @@ public class VideoAdapter extends RecyclerView.Adapter<VideoViewHolder> {
         int i=0;
         double sizeResult = bytes;
         while (sizeResult >= 1024){
-            Log.d("i values before", i+"");
+//            Log.d("i values before", i+"");
             sizeResult = sizeResult / 1024;
             i+=1;
 
-            Log.d("i values after", i+" "+" sizeResult "+sizeResult+"");
+//            Log.d("i values after", i+" "+" sizeResult "+sizeResult+"");
         }
         switch (i){
             case 0:

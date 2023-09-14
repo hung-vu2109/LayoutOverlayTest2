@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.layoutoverlaytest2.Activities.MainActivity;
 import com.example.layoutoverlaytest2.Adapters.MusicFragmentAdapter.SongAdapter;
 import com.example.layoutoverlaytest2.Interfaces.DataPassingInterface;
 import com.example.layoutoverlaytest2.Models.Song.SongModel;
@@ -34,6 +35,7 @@ public class MusicFragment extends Fragment{
     DataPassingInterface dataPassingInterface;
 //    ArrayList<SongModel> songModelArrayList;
     static final String TAG = "Music Fragment ";
+    MainActivity mainActivity;
 
 
     @Override
@@ -72,12 +74,15 @@ public class MusicFragment extends Fragment{
 //            e.printStackTrace();
 //        }
 
+        mainActivity = (MainActivity) getActivity();
     }
 
     public void recyclerViewSetAdapter(){
-        fragmentMusicRecyclerView.setLayoutManager(new LinearLayoutManager((getContext())));
-        fragmentMusicRecyclerView.setAdapter(songAdapter = new SongAdapter(getContext(), songModelArrayList));
-        fragmentMusicRecyclerView.setHasFixedSize(true);
+        if (mainActivity != null) {
+            fragmentMusicRecyclerView.setLayoutManager(new LinearLayoutManager((getContext())));
+            fragmentMusicRecyclerView.setAdapter(songAdapter = new SongAdapter(getContext(), songModelArrayList, mainActivity));
+            fragmentMusicRecyclerView.setHasFixedSize(true);
+        }
     }
     public void resetAdapter(){
         fragmentMusicRecyclerView.removeAllViews();

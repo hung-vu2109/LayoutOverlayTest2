@@ -83,7 +83,7 @@ public class VideoFragment extends Fragment {
             if(!checkOverlayPer()){
                 requestOverlayPer();
             } else {
-//            startPopModeService();
+//            startPipModeService();
             }
         }
         return super.onOptionsItemSelected(item);

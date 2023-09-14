@@ -7,7 +7,7 @@
         android:layout_height="match_parent"
         android:background="@drawable/img_background"
         app:motionDebug="NO_DEBUG"
-        app:layoutDescription="@xml/scene_24"
+        app:layoutDescription="@xml/scene_24_1"
         tools:context=".Activities.MainActivity">
 
         <FrameLayout
@@ -121,7 +121,6 @@
             android:background="@drawable/img_background">
             <TextView
                 android:id="@+id/tv_player_songName"
-                android:visibility="gone"
                 android:text="Song Name"
                 android:textSize="22sp"
                 android:textColor="@color/white"

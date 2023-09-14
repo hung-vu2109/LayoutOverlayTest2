@@ -3,6 +3,7 @@ package com.example.layoutoverlaytest2.Adapters.MusicFragmentAdapter;
 import static com.example.layoutoverlaytest2.ApplicationClass.MY_COMMAND;
 import static com.example.layoutoverlaytest2.ApplicationClass.PLAY_FROM_SONG_LIST;
 import static com.example.layoutoverlaytest2.ApplicationClass.REMOVE_SONG;
+import static com.example.layoutoverlaytest2.Services.NotificationService.media;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
@@ -18,6 +19,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.layoutoverlaytest2.Activities.MainActivity;
 import com.example.layoutoverlaytest2.Models.Song.SongModel;
 import com.example.layoutoverlaytest2.Utils.MyInitialMediaPlayer;
 import com.example.layoutoverlaytest2.R;
@@ -29,10 +31,12 @@ public class SongAdapter extends RecyclerView.Adapter<SongViewHolder> {
     private static final String TAG = " Song Adapter ";
     Context context;
     ArrayList<SongModel> songModelArrayList;
+    MainActivity mainActivity;
 
-    public SongAdapter(Context context, ArrayList<SongModel> songModelArrayList) {
+    public SongAdapter(Context context, ArrayList<SongModel> songModelArrayList, MainActivity mainActivity) {
         this.context = context;
         this.songModelArrayList = songModelArrayList;
+        this.mainActivity = mainActivity;
     }
 
     @NonNull
@@ -50,6 +54,10 @@ public class SongAdapter extends RecyclerView.Adapter<SongViewHolder> {
         holder.musicFragment_title_tv.setText(songData.getTitle());
 
         holder.itemView.setOnClickListener(view -> {
+            if (mainActivity != null) {
+                mainActivity.resetVisibilityThumbnail();
+            }
+            media = NotificationService.TYPE_OF_MEDIA.MUSIC;
             Toast.makeText(context, "item "+songData.getTitle()+" is Clicked", Toast.LENGTH_SHORT).show();
 
             MyInitialMediaPlayer.isMusic = true;

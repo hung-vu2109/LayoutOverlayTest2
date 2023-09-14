@@ -76,16 +76,18 @@
             android:layout_height="320dp"
             motion:layout_constraintEnd_toEndOf="parent"
             motion:layout_constraintStart_toStartOf="parent"
-            motion:layout_constraintTop_toTopOf="parent" />
+            motion:layout_constraintTop_toTopOf="parent"
+            motion:layout_constraintBottom_toBottomOf="parent"/>
 
         <Constraint
             android:id="@id/top_image"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            motion:layout_constraintBottom_toBottomOf="@id/top_image_container"
-            motion:layout_constraintEnd_toEndOf="@id/top_image_container"
-            motion:layout_constraintStart_toStartOf="@id/top_image_container"
-            motion:layout_constraintTop_toTopOf="@id/top_image_container" />
+            motion:layout_constraintEnd_toEndOf="parent"
+            motion:layout_constraintStart_toStartOf="parent"
+            motion:layout_constraintTop_toTopOf="parent"
+            motion:layout_constraintBottom_toBottomOf="parent"/>
+
 
         <Constraint
             android:id="@id/recyclerview_container"
@@ -93,8 +95,8 @@
             android:layout_height="0dp"
             motion:layout_constraintBottom_toBottomOf="parent"
             motion:layout_constraintEnd_toEndOf="parent"
-            motion:layout_constraintStart_toStartOf="parent"
-            motion:layout_constraintTop_toBottomOf="@id/top_image_container" />
+            motion:layout_constraintStart_toStartOf="parent"/>
+<!--            motion:layout_constraintTop_toBottomOf="@id/top_image_container" />-->
 
         <Constraint
             android:id="@id/recyclerview_front"
@@ -102,8 +104,8 @@
             android:layout_height="0dp"
             motion:layout_constraintBottom_toBottomOf="parent"
             motion:layout_constraintEnd_toEndOf="parent"
-            motion:layout_constraintStart_toStartOf="parent"
-            motion:layout_constraintTop_toBottomOf="@id/top_image_container" />
+            motion:layout_constraintStart_toStartOf="parent"/>
+<!--            motion:layout_constraintTop_toBottomOf="@id/top_image_container" />-->
 
         <Constraint
             android:id="@id/image_play"
@@ -133,7 +135,7 @@
         <Constraint
             android:id="@+id/minimalTextViewContainer"
             android:layout_width="0dp"
-            android:layout_height="0dp"
+            android:layout_height="wrap_content"
             motion:layout_constraintTop_toTopOf="@id/top_image_container"
             motion:layout_constraintStart_toEndOf="@id/top_image"
             motion:layout_constraintBottom_toBottomOf="@id/top_image_container" />

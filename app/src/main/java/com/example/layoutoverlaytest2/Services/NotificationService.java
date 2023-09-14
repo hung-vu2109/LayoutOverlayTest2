@@ -39,6 +39,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
+import android.view.TextureView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.SeekBar;
@@ -118,6 +119,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     MediaSession mediaSession;
     NotificationManagerCompat notificationManagerCompat;
     VideoTextureViewFragment videoTextureViewFragment;
+    TextureView textureView;
 
     @Override
     public void onCreate() {
@@ -136,15 +138,6 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         initialMusicPlayer();
     }
 
-    private boolean checkReadStoragePer() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Log.d(TAG, "Check Reading Storage Permission for API 30");
-            return Environment.isExternalStorageManager();
-        } else {
-            Log.d(TAG, "Check Reading Storage Permission");
-            return ContextCompat.checkSelfPermission(this, RUNTIME_PERMISSION[0]) == PackageManager.PERMISSION_GRANTED;
-        }
-    }
     public void shutdownNotificationService(){
         Log.d(TAG, " shutdown service");
         onUnbind(new Intent(this, MainActivity.class));
@@ -367,10 +360,10 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
     }
 
     /*************************************************************************  updateTextureView  ************************************************************************/
-    public void setCurrentPositionMediaToContinue(){
+    public void getCurrentPositionMediaToContinue(){
         if (currentVideo != null) {
             currentPosition = mediaPlayer.getCurrentPosition();
-            Log.d(TAG, " setCurrentPositionMediaToContinue: " + currentPosition + "");
+            Log.d(TAG, " getCurrentPositionMediaToContinue: " + currentPosition + "");
         }
     }
     private boolean getIsPlayingVideoState(){
@@ -381,7 +374,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
         if (currentVideo != null && getTypeOfMedia() == TYPE_OF_MEDIA.VIDEO && isAliveMainActivity) {
             Log.d(TAG, " Start New Video ");
             // start new video
-            videoTextureViewFragment = new VideoTextureViewFragment(this, mediaPlayer, currentVideo.getPathVideo(), currentPosition, getIsPlayingVideoState());
+            videoTextureViewFragment = new VideoTextureViewFragment(this, mediaPlayer, currentVideo.getPathVideo(), currentPosition, getIsPlayingVideoState(), currentVideo.getWidthVideo(), currentVideo.getHeightVideo());
             currentPosition = -1;
         }
             return videoTextureViewFragment;
@@ -392,7 +385,9 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
             sendEmptyMsgToMainActivity(1);
         }
     }
+    private void updateTextureViewSize(){
 
+    }
     /*************************************************************************  updateTextureView  ************************************************************************/
     public class MyBinder extends Binder {
         public NotificationService getService() {
@@ -463,7 +458,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
             public void run() {
 
                 if (MyInitialMediaPlayer.isStarted){
-                    Log.d(TAG+" updateUiFromService", "Start Update");
+//                    Log.d(TAG+" updateUiFromService", "Start Update");
                     if (currentSong != null || currentVideo != null) {
                         if (commandArrive) {
                             Log.d(TAG + " updateUiFromService", "Start Update" + " CommandArrive");
@@ -517,6 +512,7 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
                     setInitialItemNav = false;
                 }
 
+//                Log.d(TAG + " updateUiFromService", " is Running ...");
                 try {
                     handler.postDelayed(updateUiRunnable, 200);
                 } catch (Exception e) {
@@ -540,12 +536,14 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
         Log.d(TAG, "playMusic method");
         try {
+
             mediaPlayer.reset();
             if (MyInitialMediaPlayer.isMusic) {
                 mediaPlayer.setDataSource(currentSong.getPath());
             } else {
                 mediaPlayer.setDataSource(currentVideo.getPathVideo());
             }
+            mediaPlayer.setSurface(null);
             mediaPlayer.prepareAsync();
             mediaPlayer.setOnPreparedListener(MediaPlayer::start);
 
@@ -554,7 +552,9 @@ public class NotificationService extends Service implements MediaPlayer.OnErrorL
 
             sendEmptyMsgToMainActivity(0);
 
+
             updateNotificationView();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
